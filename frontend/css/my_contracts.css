@@ -1,0 +1,19 @@
+/* Styles for My Contracts page */
+.table-container { overflow-x: auto; }
+.contract-table, #contractsTable { width: 100%; border-collapse: collapse; }
+#contractsTable th, #contractsTable td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+#contractsTable th { color: var(--blue-700); }
+.table-empty { text-align: center; color: var(--gray-600); }
+.left-panel-full { flex: 2; }
+.rental-details img { width: 100px; border-radius: 8px; }
+.rental-details .car-box { display:flex; align-items:center; gap:12px; }
+.contract-actions { display:flex; gap:8px; justify-content:flex-end; }
+
+/* Buttons */
+.btn-primary { background: var(--blue-500); color: var(--white); border: none; padding: 8px 12px; border-radius: 8px; cursor:pointer; }
+.btn { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--blue-200); background: var(--white); cursor: pointer; }
+
+@media (max-width: 900px) {
+  .right-panel { display:none; }
+  .left-panel-full { flex: 1; }
+}

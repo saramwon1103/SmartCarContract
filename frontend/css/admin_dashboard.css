@@ -152,6 +152,8 @@
   .content {
     display: flex;
     gap: 24px;
+    overflow-x: hidden;
+    max-width: 100%;
   }
   
   .left-panel {

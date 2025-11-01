@@ -1,30 +1,262 @@
 /* Admin users specific styles */
-.users-content .card { padding: 18px; }
+.users-content-card { padding: 20px; }
 .table-wrap { overflow-x: auto; }
 table#usersTable { width: 100%; border-collapse: collapse; }
 table#usersTable th, table#usersTable td {
-  padding: 10px 12px;
+  padding: 12px;
   text-align: left;
   border-bottom: 1px solid var(--gray-100);
   font-size: 14px;
 }
-table#usersTable th { color: var(--blue-700); }
-table#usersTable tbody tr:hover { background: var(--blue-100); }
-.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--blue-200); background: var(--white); cursor: pointer; }
-.btn-primary { background: var(--blue-500); color: var(--white); border-color: transparent; }
-.btn.danger { background: #FFECEC; color: #C43A3A; border-color: transparent; }
+table#usersTable th { 
+  color: var(--blue-700);
+  font-weight: 600;
+  background: var(--gray-100);
+}
+table#usersTable tbody tr:hover { background: var(--blue-100); cursor: pointer; }
+.btn { 
+  padding: 8px 16px; 
+  border-radius: 8px; 
+  border: 1px solid var(--blue-200); 
+  background: var(--white); 
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.btn:hover {
+  background: var(--blue-100);
+}
+.btn-primary { 
+  background: var(--blue-500); 
+  color: var(--white); 
+  border-color: transparent;
+}
+.btn-primary:hover {
+  background: var(--blue-600);
+}
+.btn.danger { 
+  background: #FFECEC; 
+  color: #C43A3A; 
+  border-color: transparent;
+  margin-left: 8px;
+}
+.btn.danger:hover {
+  background: #FFD6D6;
+}
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--blue-500);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  margin-left: 8px;
+  text-decoration: underline;
+}
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--gray-600);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.btn-close:hover {
+  background: var(--gray-100);
+  color: var(--blue-700);
+}
 
 /* Modal */
-.modal { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(10,25,111,0.35); }
+.modal { 
+  position: fixed; 
+  inset: 0; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  background: rgba(10, 25, 111, 0.35);
+  z-index: 1000;
+}
 .modal.hidden { display: none; }
-.modal-card { background: var(--white); padding: 18px; border-radius: 12px; width: 420px; box-shadow: 0 8px 30px rgba(10,25,111,0.12); }
-.modal-card h4 { margin-bottom: 8px; }
-.modal-card label { display:block; font-size:13px; margin-top:8px; color:var(--blue-700); }
-.modal-card input, .modal-card select { width:100%; padding:8px 10px; margin-top:6px; border-radius:8px; border:1px solid var(--gray-300); }
+.modal-card { 
+  background: var(--white); 
+  padding: 24px; 
+  border-radius: 16px; 
+  width: 600px; 
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 30px rgba(10, 25, 111, 0.12);
+}
+.modal-card.modal-large {
+  width: 800px;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray-300);
+}
+.modal-header h4 {
+  color: var(--blue-700);
+  font-size: 20px;
+  margin: 0;
+}
+
+/* Form Styles */
+.form-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.form-section:last-child {
+  border-bottom: none;
+}
+.section-title {
+  color: var(--blue-700);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.section-subtitle {
+  color: var(--blue-800);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+.form-group label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--blue-700);
+  font-weight: 500;
+}
+.required {
+  color: #EF4444;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-300);
+  font-size: 14px;
+  color: var(--blue-800);
+  transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--blue-500);
+}
+.form-group input[readonly] {
+  background: var(--gray-100);
+  cursor: not-allowed;
+}
+.form-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--gray-600);
+  margin-top: 4px;
+}
+
+/* Wallets List */
+.wallets-list {
+  margin-top: 16px;
+}
+.wallets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wallet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--blue-100);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.wallet-address {
+  font-family: monospace;
+  color: var(--blue-700);
+}
+.wallet-network {
+  color: var(--gray-600);
+  font-size: 12px;
+}
+.wallet-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Related Stats */
+.related-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stat-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--blue-100);
+  border-radius: 8px;
+}
+.stat-label {
+  color: var(--gray-600);
+  font-size: 14px;
+  margin-right: 8px;
+}
+.stat-value {
+  color: var(--blue-700);
+  font-weight: 600;
+  font-size: 16px;
+  margin-right: auto;
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray-100);
+}
 
 /* Responsive */
+@media (max-width: 900px) {
+  .modal-card.modal-large {
+    width: 95%;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 800px) {
-  .sidebar { display:none; }
+  .sidebar { display: none; }
   .search { width: 100%; }
   .modal-card { width: 96%; }
 }

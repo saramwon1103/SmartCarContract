@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Contracts | Morent</title>
+    <link rel="stylesheet" href="../css/admin_dashboard.css" />
+    <link rel="stylesheet" href="../css/my_contracts.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <aside class="sidebar">
+        <h2 class="logo">MORENT</h2>
+        <nav class="menu">
+          <a href="admin_dashboard.html"><img src="../image/home.svg" class="icon"> Dashboard</a>
+          <a href="car_rent.html"><img src="../image/car.svg" class="icon"> Car Rent</a>
+          <a href="admin_users.html"><img src="../image/person.svg" class="icon"> User</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="search">
+            <input id="searchContracts" type="text" placeholder="Search contract id, car, customer..." />
+            <span class="filter"><img src="../image/search.svg" alt="Search" class="icon"></span>
+          </div>
+          <div class="user-icons">
+            <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+          </div>
+        </header>
+
+        <section class="content">
+          <div class="left-panel left-panel-full">
+            <div class="card">
+              <div class="header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3>My Contracts</h3>
+                <div>
+                  <button id="refreshBtn" class="btn">Refresh</button>
+                </div>
+              </div>
+
+              <div class="table-container">
+                <table id="contractsTable">
+                  <thead>
+                    <tr>
+                      <th>Contract ID</th>
+                      <th>Car</th>
+                      <th>Type</th>
+                      <th>Period</th>
+                      <th>Status</th>
+                      <th>Deposit</th>
+                      <th>Total</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="8" class="table-empty">Loading contracts...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-panel">
+            <div class="card rental-details" id="contractDetails">
+              <h3>Contract Details</h3>
+              <div class="car-box">
+                <img id="detailCarImage" src="" alt="Car image">
+                <div>
+                  <h4 id="detailCarName">-</h4>
+                  <p id="detailCarType">-</p>
+                </div>
+                <span id="detailContractId">-</span>
+              </div>
+              <div class="pickup-drop">
+                <div>
+                  <h5>Start</h5>
+                  <p id="detailStartDate">-</p>
+                </div>
+                <div>
+                  <h5>End</h5>
+                  <p id="detailEndDate">-</p>
+                </div>
+              </div>
+              <div class="total-price">
+                <p>Deposit</p>
+                <h3 id="detailDeposit">-</h3>
+              </div>
+              <div class="total-price">
+                <p>Total Price</p>
+                <h3 id="detailTotalPrice">-</h3>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+                <button id="payBtn" class="btn btn-primary">Pay</button>
+                <button id="viewOnChain" class="btn">View on Blockchain</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="../js/my_contracts.js"></script>
+  </body>
+</html>

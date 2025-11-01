@@ -40,10 +40,35 @@
 /* Left Panel */
 .left-panel-full {
   flex: 1;
+  min-width: 0; /* Prevent flex item overflow */
+  max-width: calc(100% - 320px); /* Reserve space for right panel */
+}
+
+/* Ensure content doesn't overflow */
+section.content {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.right-panel {
+  min-width: 300px;
+  max-width: 320px;
+  flex-shrink: 0;
+}
+
+/* Prevent main from overflowing */
+.main {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Header Section */
 .filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -138,6 +163,18 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Table Styles */
@@ -281,6 +318,8 @@
   color: var(--blue-600);
   font-family: monospace;
   word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .contract-customer-info {
@@ -315,5 +354,77 @@
 
 #emptyState p {
   color: var(--gray-600);
+}
+
+/* Responsive fixes */
+@media (max-width: 1400px) {
+  .left-panel-full {
+    max-width: calc(100% - 280px);
+  }
+  
+  .right-panel {
+    max-width: 280px;
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .left-panel-full {
+    max-width: 100%;
+  }
+  
+  .right-panel {
+    display: none;
+  }
+  
+  .right-panel.show-details {
+    display: flex;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 90vw;
+    background: var(--white);
+    z-index: 100;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    padding: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .filter-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .contract-table {
+    font-size: 12px;
+  }
+  
+  .contract-table th,
+  .contract-table td {
+    padding: 8px;
+  }
+  
+  .table-car-image {
+    width: 40px;
+    height: 30px;
+  }
+  
+  .contract-actions {
+    flex-direction: column;
+  }
+  
+  .contract-actions button {
+    width: 100%;
+  }
 }
 
