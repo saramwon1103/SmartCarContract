@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Morent</title>
+  <link rel="stylesheet" href="../../frontend/css/admin_dashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Thêm thư viện Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* chỉnh nhỏ chút cho chart */
+    .chart canvas {
+      width: 220px !important;
+      height: 220px !important;
+      margin: 0 auto;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">MORENT</h2>
+      <nav class="menu">
+        <a href="#"><i><img src="../image/home.svg" alt="Dashboard icon" class="icon"></i> Dashboard</a>
+        <a href="#"><i><img src="../image/car.svg" alt="Car icon" class="icon"></i> Car Rent</a>
+        <a href="#"><i><img src="../image/person.svg" alt="User icon" class="icon"></i> User</a>
+      </nav>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input type="text" placeholder="Search something here" />
+          <span class="filter"><img src="../image/search.svg" alt="Search icon" class="icon"></span>
+        </div>
+        <div class="user-icons">
+          <span><img src="../image/heart.svg" alt="Heart icon" class="icon"></span>
+          <span><img src="../image/notification.svg" alt="Bell icon" class="icon"></span>
+          <span><img src="../image/setting.svg" alt="Settings icon" class="icon"></span>
+          <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+          <div class="card rental-details">
+            <h3>Details Rental</h3>
+            <div class="map"></div>
+            <div class="car-box">
+              <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+              <div>
+                <h4>Nissan GT – R</h4>
+                <p>Sport Car</p>
+              </div>
+              <span>#9761</span>
+            </div>
+            <div class="pickup-drop">
+              <div>
+                <h5>Pick - Up</h5>
+                <p>Location: Kota Semarang</p>
+                <p>Date: 20 July 2022</p>
+                <p>Time: 07:00</p>
+              </div>
+              <div>
+                <h5>Drop - Off</h5>
+                <p>Location: Kota Semarang</p>
+                <p>Date: 21 July 2022</p>
+                <p>Time: 01:00</p>
+              </div>
+            </div>
+            <div class="total-price">
+              <p>Total Rental Price</p>
+              <h3>$80.00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+          <!-- TOP 5 CAR RENTAL -->
+          <div class="card chart">
+            <h3>Top 5 Car Rental</h3>
+            <canvas id="carChart"></canvas>
+            <ul>
+              <li><span class="dot blue"></span> Sport Car <b>17,439</b></li>
+              <li><span class="dot navy"></span> SUV <b>9,478</b></li>
+              <li><span class="dot sky"></span> Coupe <b>18,197</b></li>
+              <li><span class="dot light"></span> Hatchback <b>12,510</b></li>
+              <li><span class="dot gray"></span> MPV <b>14,406</b></li>
+            </ul>
+          </div>
+
+          <!-- TRANSACTIONS -->
+          <div class="card transactions">
+            <div class="header">
+              <h3>Recent Transaction</h3>
+              <a href="#">View All</a>
+            </div>
+            <ul>
+              <li>
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg">
+                <div><h4>Nissan GT – R</h4><p>Sport Car</p></div>
+                <span>20 July</span><b>$80.00</b>
+              </li>
+              <li>
+                <img src="https://cdn.motor1.com/images/mgl/8jjq1/s3/koenigsegg.jpg">
+                <div><h4>Koenigsegg</h4><p>Sport Car</p></div>
+                <span>19 July</span><b>$99.00</b>
+              </li>
+              <li>
+                <img src="https://cdn.motor1.com/images/mgl/0ANRm/s3/rolls-royce-dawn.jpg">
+                <div><h4>Rolls – Royce</h4><p>Sport Car</p></div>
+                <span>18 July</span><b>$96.00</b>
+              </li>
+              <li>
+                <img src="https://cdn.motor1.com/images/mgl/nGvvk/s3/honda-cr-v.jpg">
+                <div><h4>CR – V</h4><p>SUV</p></div>
+                <span>17 July</span><b>$80.00</b>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- CHART SCRIPT -->
+  <script>
+    const ctx = document.getElementById('carChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sport Car', 'SUV', 'Coupe', 'Hatchback', 'MPV'],
+        datasets: [{
+          data: [17439, 9478, 18197, 12510, 14406],
+          backgroundColor: ['#3563E9', '#264BC8', '#85A8F8', '#AEC8FC', '#D6E4FD'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '65%',
+        plugins: { legend: { display: false } }
+      }
+    });
+  </script>
+</body>
+</html>
