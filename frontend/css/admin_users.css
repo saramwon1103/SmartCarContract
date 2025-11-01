@@ -1,0 +1,30 @@
+/* Admin users specific styles */
+.users-content .card { padding: 18px; }
+.table-wrap { overflow-x: auto; }
+table#usersTable { width: 100%; border-collapse: collapse; }
+table#usersTable th, table#usersTable td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 14px;
+}
+table#usersTable th { color: var(--blue-700); }
+table#usersTable tbody tr:hover { background: var(--blue-100); }
+.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--blue-200); background: var(--white); cursor: pointer; }
+.btn-primary { background: var(--blue-500); color: var(--white); border-color: transparent; }
+.btn.danger { background: #FFECEC; color: #C43A3A; border-color: transparent; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(10,25,111,0.35); }
+.modal.hidden { display: none; }
+.modal-card { background: var(--white); padding: 18px; border-radius: 12px; width: 420px; box-shadow: 0 8px 30px rgba(10,25,111,0.12); }
+.modal-card h4 { margin-bottom: 8px; }
+.modal-card label { display:block; font-size:13px; margin-top:8px; color:var(--blue-700); }
+.modal-card input, .modal-card select { width:100%; padding:8px 10px; margin-top:6px; border-radius:8px; border:1px solid var(--gray-300); }
+
+/* Responsive */
+@media (max-width: 800px) {
+  .sidebar { display:none; }
+  .search { width: 100%; }
+  .modal-card { width: 96%; }
+}

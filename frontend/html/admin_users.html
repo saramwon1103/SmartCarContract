@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin - Users | Morent</title>
+    <link rel="stylesheet" href="../css/admin_dashboard.css" />
+    <link rel="stylesheet" href="../css/admin_users.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <aside class="sidebar">
+        <h2 class="logo">MORENT</h2>
+        <nav class="menu">
+          <a href="admin_dashboard.html"><img src="../image/home.svg" class="icon"> Dashboard</a>
+          <a href="car_rent.html"><img src="../image/car.svg" class="icon"> Car Rent</a>
+          <a class="active" href="admin_users.html"><img src="../image/person.svg" class="icon"> User</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="search">
+            <input id="searchInput" type="text" placeholder="Search users by name or email" />
+            <span class="filter"><img src="../image/search.svg" alt="Search" class="icon"></span>
+          </div>
+          <div class="user-icons">
+            <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+          </div>
+        </header>
+
+        <section class="content">
+          <!-- LEFT PANEL: place the users card here so existing CSS positions it like the dashboard -->
+          <div class="left-panel">
+            <div class="card users-content-card">
+              <div class="header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3>Users Management</h3>
+                <div>
+                  <button id="refreshBtn" class="btn">Refresh</button>
+                  <button id="createBtn" class="btn btn-primary">Create User</button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="usersTable">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Full Name</th>
+                      <th>Email</th>
+                      <th>Wallet</th>
+                      <th>Role</th>
+                      <th>Created At</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- rows injected by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: keep empty or add summary cards later -->
+          <div class="right-panel">
+            <div class="card">
+              <h3>Summary</h3>
+              <p style="color:var(--gray-600);font-size:14px;">Quick stats or controls can go here.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Edit modal (simple) -->
+    <div id="editModal" class="modal hidden">
+      <div class="modal-card">
+        <h4>Edit User</h4>
+        <form id="editForm">
+          <input type="hidden" name="userId" />
+          <label>Full name</label>
+          <input name="fullname" type="text" />
+          <label>Email</label>
+          <input name="email" type="email" />
+          <label>Role</label>
+          <select name="role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+          <div style="margin-top:12px;text-align:right;">
+            <button type="button" id="cancelEdit" class="btn">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="../js/admin_users.js"></script>
+  </body>
+</html>
