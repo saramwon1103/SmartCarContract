@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Car Rent Management | Morent</title>
+  <link rel="stylesheet" href="../css/admin_dashboard.css" />
+  <link rel="stylesheet" href="../css/car_rent.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">MORENT</h2>
+      <nav class="menu">
+        <a href="admin_dashboard.html"><i><img src="../image/home.svg" alt="Dashboard icon" class="icon"></i> Dashboard</a>
+        <a href="car_rent.html" class="active"><i><img src="../image/car.svg" alt="Car icon" class="icon"></i> Car Rent</a>
+        <a href="#"><i><img src="../image/person.svg" alt="User icon" class="icon"></i> User</a>
+      </nav>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input type="text" placeholder="Search car, customer, contract..." id="searchInput" />
+          <span class="filter"><img src="../image/search.svg" alt="Search icon" class="icon"></span>
+        </div>
+        <div class="user-icons">
+          <span><img src="../image/heart.svg" alt="Heart icon" class="icon"></span>
+          <span><img src="../image/notification.svg" alt="Bell icon" class="icon"></span>
+          <span><img src="../image/setting.svg" alt="Settings icon" class="icon"></span>
+          <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- LEFT PANEL - List of Rented Cars -->
+        <div class="left-panel left-panel-full">
+          <div class="card">
+            <div class="header filter-header">
+              <h3>Car Rent Management</h3>
+              <div class="filter-controls">
+                <select id="statusFilter" class="status-filter">
+                  <option value="">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Active">Active</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Terminated">Terminated</option>
+                </select>
+                <button class="btn-primary" onclick="refreshData()">Refresh</button>
+              </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <p>Total Contracts</p>
+                <h4 id="totalContracts">0</h4>
+              </div>
+              <div class="stat-card">
+                <p>Active</p>
+                <h4 id="activeContracts">0</h4>
+              </div>
+              <div class="stat-card">
+                <p>Pending</p>
+                <h4 id="pendingContracts">0</h4>
+              </div>
+              <div class="stat-card">
+                <p>Completed</p>
+                <h4 id="completedContracts">0</h4>
+              </div>
+            </div>
+
+            <!-- Table of Rented Cars -->
+            <div class="table-container">
+              <table class="contract-table">
+                <thead>
+                  <tr>
+                    <th>Contract ID</th>
+                    <th>Car</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Deposit</th>
+                    <th>Total Price</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="rentedCarsTable">
+                  <!-- Data will be loaded here -->
+                  <tr>
+                    <td colspan="8" class="table-empty">Loading data...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL - Selected Contract Details -->
+        <div class="right-panel">
+          <div class="card rental-details" id="contractDetails">
+            <h3>Contract Details</h3>
+            <div class="car-box">
+              <img id="detailCarImage" src="" alt="Car image">
+              <div>
+                <h4 id="detailCarName">-</h4>
+                <p id="detailCarType">-</p>
+              </div>
+              <span id="detailContractId">-</span>
+            </div>
+            <div class="contract-detail-section">
+              <p class="contract-detail-label">Contract Type</p>
+              <p class="contract-detail-value" id="detailContractType">-</p>
+            </div>
+            <div class="contract-detail-section">
+              <p class="contract-detail-label">Transaction Hash (TXHash)</p>
+              <p class="contract-detail-hash" id="detailTXHash">-</p>
+            </div>
+            <div class="pickup-drop">
+              <div>
+                <h5>Start Date</h5>
+                <p id="detailStartDate">-</p>
+              </div>
+              <div>
+                <h5>End Date</h5>
+                <p id="detailEndDate">-</p>
+              </div>
+            </div>
+            <div class="contract-customer-info">
+              <h5>Customer Info</h5>
+              <p>Name: <span id="detailCustomerName">-</span></p>
+              <p>Email: <span id="detailCustomerEmail">-</span></p>
+            </div>
+            <div class="total-price contract-price-box">
+              <p>Deposit Amount</p>
+              <h3 id="detailDeposit">-</h3>
+            </div>
+            <div class="total-price">
+              <p>Total Price</p>
+              <h3 id="detailTotalPrice">-</h3>
+            </div>
+            <div class="contract-actions">
+              <button class="btn-secondary" onclick="viewOnBlockchain()">View on Blockchain</button>
+              <button class="btn-danger" onclick="terminateContract()">Terminate</button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div class="card" id="emptyState">
+            <p>Select a contract to view details</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // API Base URL - Update with your backend URL
+    const API_BASE_URL = 'http://localhost/api'; // Change to your backend URL
+
+    // Sample data structure based on Contracts table schema
+    // Replace with actual API calls
+    let contractsData = [
+      {
+        ContractId: "CT001",
+        CarId: "CR001",
+        UserId: "US001",
+        Type: "Rent",
+        StartDate: "2024-01-15",
+        EndDate: "2024-07-15",
+        Deposit: 5000.00,
+        TotalPrice: 60000.00,
+        Status: "Active",
+        TXHash: "0x1234567890abcdef1234567890abcdef12345678",
+        // Joined data from Car table
+        carImage: "https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg",
+        carName: "Nissan GT-R",
+        carType: "Sport Car",
+        // Joined data from User table
+        customerName: "John Doe",
+        customerEmail: "john.doe@example.com",
+        customerWallet: "0xABC...DEF"
+      },
+      {
+        ContractId: "CT002",
+        CarId: "CR002",
+        UserId: "US002",
+        Type: "Rent",
+        StartDate: "2024-02-01",
+        EndDate: "2024-08-01",
+        Deposit: 8000.00,
+        TotalPrice: 96000.00,
+        Status: "Pending",
+        TXHash: "0x2345678901bcdef012345678901bcdef01234567",
+        carImage: "https://cdn.motor1.com/images/mgl/8jjq1/s3/koenigsegg.jpg",
+        carName: "Koenigsegg",
+        carType: "Sport Car",
+        customerName: "Jane Smith",
+        customerEmail: "jane.smith@example.com",
+        customerWallet: "0xDEF...ABC"
+      },
+      {
+        ContractId: "CT003",
+        CarId: "CR003",
+        UserId: "US003",
+        Type: "Purchase",
+        StartDate: "2023-11-10",
+        EndDate: "2024-11-10",
+        Deposit: 10000.00,
+        TotalPrice: 240000.00,
+        Status: "Active",
+        TXHash: "0x3456789012cdef0123456789012cdef01234567",
+        carImage: "https://cdn.motor1.com/images/mgl/0ANRm/s3/rolls-royce-dawn.jpg",
+        carName: "Rolls-Royce Dawn",
+        carType: "Luxury Car",
+        customerName: "Robert Johnson",
+        customerEmail: "robert.j@example.com",
+        customerWallet: "0x123...456"
+      },
+      {
+        ContractId: "CT004",
+        CarId: "CR004",
+        UserId: "US004",
+        Type: "Rent",
+        StartDate: "2023-06-01",
+        EndDate: "2024-06-01",
+        Deposit: 3000.00,
+        TotalPrice: 36000.00,
+        Status: "Completed",
+        TXHash: "0x4567890123def01234567890123def01234567",
+        carImage: "https://cdn.motor1.com/images/mgl/nGvvk/s3/honda-cr-v.jpg",
+        carName: "Honda CR-V",
+        carType: "SUV",
+        customerName: "Emily Brown",
+        customerEmail: "emily.brown@example.com",
+        customerWallet: "0x456...789"
+      }
+    ];
+
+    let selectedContract = null;
+
+
+    // Render table
+    function renderTable(data = contractsData) {
+      const tbody = document.getElementById('rentedCarsTable');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No contracts found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(contract => `
+        <tr onclick="selectContract('${contract.ContractId}')">
+          <td>${contract.ContractId}</td>
+          <td>
+            <div class="table-car-info">
+              <img src="${contract.carImage}" alt="${contract.carName}" class="table-car-image">
+              <div>
+                <p class="table-car-name">${contract.carName}</p>
+                <p class="table-car-type">${contract.carType}</p>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div>
+              <p class="table-car-name">${contract.customerName}</p>
+              <p class="table-car-type">${contract.customerEmail}</p>
+            </div>
+          </td>
+          <td>${contract.Type}</td>
+          <td><span class="status-badge ${contract.Status.toLowerCase()}">${contract.Status}</span></td>
+          <td class="table-price">$${contract.Deposit.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+          <td class="table-price">$${contract.TotalPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+          <td>
+            <button class="btn-view" onclick="event.stopPropagation(); selectContract('${contract.ContractId}')">View</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Update stats
+    function updateStats() {
+      const total = contractsData.length;
+      const active = contractsData.filter(c => c.Status === 'Active').length;
+      const pending = contractsData.filter(c => c.Status === 'Pending').length;
+      const completed = contractsData.filter(c => c.Status === 'Completed').length;
+
+      document.getElementById('totalContracts').textContent = total;
+      document.getElementById('activeContracts').textContent = active;
+      document.getElementById('pendingContracts').textContent = pending;
+      document.getElementById('completedContracts').textContent = completed;
+    }
+
+    // Select contract to view details
+    function selectContract(contractId) {
+      selectedContract = contractsData.find(c => c.ContractId === contractId);
+      if (!selectedContract) return;
+
+      document.getElementById('detailCarImage').src = selectedContract.carImage;
+      document.getElementById('detailCarName').textContent = selectedContract.carName;
+      document.getElementById('detailCarType').textContent = selectedContract.carType;
+      document.getElementById('detailContractId').textContent = `#${selectedContract.ContractId}`;
+      document.getElementById('detailContractType').textContent = selectedContract.Type;
+      document.getElementById('detailTXHash').textContent = selectedContract.TXHash;
+      document.getElementById('detailStartDate').textContent = selectedContract.StartDate;
+      document.getElementById('detailEndDate').textContent = selectedContract.EndDate;
+      document.getElementById('detailCustomerName').textContent = selectedContract.customerName;
+      document.getElementById('detailCustomerEmail').textContent = selectedContract.customerEmail;
+      document.getElementById('detailDeposit').textContent = `$${selectedContract.Deposit.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      document.getElementById('detailTotalPrice').textContent = `$${selectedContract.TotalPrice.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+      document.getElementById('contractDetails').classList.add('show');
+      document.getElementById('emptyState').style.display = 'none';
+    }
+
+    // Filter and search
+    function filterContracts() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      let filtered = contractsData.filter(contract => {
+        const matchSearch = 
+          contract.ContractId.toLowerCase().includes(searchTerm) ||
+          contract.carName.toLowerCase().includes(searchTerm) ||
+          contract.carType.toLowerCase().includes(searchTerm) ||
+          contract.customerName.toLowerCase().includes(searchTerm) ||
+          contract.customerEmail.toLowerCase().includes(searchTerm) ||
+          contract.Type.toLowerCase().includes(searchTerm);
+        
+        const matchStatus = !statusFilter || contract.Status === statusFilter;
+        return matchSearch && matchStatus;
+      });
+
+      renderTable(filtered);
+    }
+
+    // View on blockchain
+    function viewOnBlockchain() {
+      if (!selectedContract) return;
+      // View transaction on blockchain explorer
+      const explorerUrl = `https://polygonscan.com/tx/${selectedContract.TXHash}`;
+      window.open(explorerUrl, '_blank');
+    }
+
+    // Terminate contract
+    function terminateContract() {
+      if (!selectedContract) return;
+      if (!confirm(`Are you sure you want to terminate contract ${selectedContract.ContractId}?`)) return;
+      
+      // TODO: Call backend API to terminate contract on blockchain
+      alert('Contract termination initiated. This will call the smart contract.');
+      // refreshData();
+    }
+
+    // Refresh data
+    function refreshData() {
+      // TODO: Fetch data from backend API
+      console.log('Refreshing data...');
+      updateStats();
+      renderTable();
+    }
+
+    // Event listeners
+    document.getElementById('searchInput').addEventListener('input', filterContracts);
+    document.getElementById('statusFilter').addEventListener('change', filterContracts);
+
+    // Initialize
+    updateStats();
+    renderTable();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,319 @@
+/* ===============================
+   Car Rent Management Page Styles
+   Extends admin_dashboard.css
+=================================*/
+
+/* Stats Cards */
+.stat-card {
+  background: var(--blue-100);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-card p {
+  color: var(--gray-600);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.stat-card h4 {
+  font-size: 24px;
+}
+
+.stat-card h4#totalContracts {
+  color: var(--blue-700);
+}
+
+.stat-card h4#activeContracts {
+  color: var(--blue-500);
+}
+
+.stat-card h4#pendingContracts {
+  color: #FFA500;
+}
+
+.stat-card h4#completedContracts {
+  color: #10B981;
+}
+
+/* Left Panel */
+.left-panel-full {
+  flex: 1;
+}
+
+/* Header Section */
+.filter-header {
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Status Filter Select */
+.status-filter {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--blue-200);
+  background: var(--white);
+  color: var(--blue-800);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.status-filter:focus {
+  outline: none;
+  border-color: var(--blue-500);
+}
+
+/* Buttons */
+.btn-primary {
+  padding: 8px 16px;
+  background: var(--blue-500);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--blue-600);
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: var(--blue-100);
+  color: var(--blue-700);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--blue-200);
+}
+
+.btn-danger {
+  flex: 1;
+  padding: 10px;
+  background: #EF4444;
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+}
+
+.btn-view {
+  padding: 6px 12px;
+  background: var(--blue-500);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.btn-view:hover {
+  background: var(--blue-600);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+}
+
+.contract-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.contract-table thead tr {
+  border-bottom: 2px solid var(--gray-300);
+}
+
+.contract-table th {
+  text-align: left;
+  padding: 12px;
+  color: var(--blue-700);
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--gray-100);
+}
+
+.contract-table tbody tr {
+  border-bottom: 1px solid var(--gray-100);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.contract-table tbody tr:hover {
+  background: var(--blue-100);
+}
+
+.contract-table td {
+  padding: 12px;
+}
+
+.table-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--gray-600);
+}
+
+/* Table Cell Content */
+.table-car-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.table-car-image {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.table-car-name {
+  font-weight: 500;
+  color: var(--blue-700);
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.table-car-type {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.table-address {
+  font-size: 13px;
+  color: var(--blue-800);
+  font-family: monospace;
+}
+
+.table-price {
+  font-size: 14px;
+  color: var(--blue-700);
+  font-weight: 500;
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-badge.pending {
+  background: #FFF7ED;
+  color: #C2410C;
+}
+
+.status-badge.active {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.status-badge.completed {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.status-badge.terminated {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+/* Contract Details Panel */
+#contractDetails {
+  display: none !important;
+}
+
+#contractDetails.show {
+  display: block !important;
+}
+
+.contract-detail-section {
+  margin-bottom: 16px;
+}
+
+.contract-detail-label {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+
+.contract-detail-value {
+  font-size: 14px;
+  color: var(--blue-700);
+  font-weight: 500;
+}
+
+.contract-detail-hash {
+  font-size: 12px;
+  color: var(--blue-600);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.contract-customer-info {
+  margin-bottom: 12px;
+}
+
+.contract-customer-info h5 {
+  color: var(--blue-700);
+  margin-bottom: 6px;
+}
+
+.contract-customer-info p {
+  font-size: 14px;
+  color: var(--gray-600);
+}
+
+.contract-price-box {
+  margin-bottom: 12px;
+}
+
+.contract-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+/* Empty State */
+#emptyState {
+  text-align: center;
+  padding: 40px;
+}
+
+#emptyState p {
+  color: var(--gray-600);
+}
+
