@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Car Detail | Morent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/car_detail.css" />
+</head>
+
+<body>
+  <header>
+    <div class="logo">MORENT</div>
+    <div class="search-bar">
+      <input type="text" placeholder="Search something here..." />
+      <img src="../image/search.svg" alt="search" />
+    </div>
+    <div class="user-icons">
+      <img src="../image/heart.svg" alt="heart">
+      <img src="../image/notification.svg" alt="bell">
+      <img src="../image/setting.svg" alt="setting">
+      <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar">
+    </div>
+  </header>
+
+  <main>
+    <div class="left">
+      <div class="banner">
+        <div>
+          <h2>Sports car with the best design and acceleration</h2>
+          <p>Safety and comfort while driving a futuristic and elegant sports car</p>
+        </div>
+        <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+      </div>
+
+      <div class="car-gallery">
+        <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg">
+        <img src="https://cdn.motor1.com/images/mgl/1xEJJ/s3/nissan-gt-r-interior.jpg">
+        <img src="https://cdn.motor1.com/images/mgl/2xEJJ/s3/nissan-gt-r-dashboard.jpg">
+      </div>
+
+      <div class="car-info">
+        <h2>Nissan GT – R</h2>
+        <p>NISMO has become the embodiment of Nissan’s outstanding performance, inspired by the most unforgiving proving ground, the “race track”.</p>
+        <div class="car-specs">
+          <span><b>Type Car:</b> Sport</span>
+          <span><b>Capacity:</b> 2 Person</span>
+          <span><b>Steering:</b> Manual</span>
+          <span><b>Gasoline:</b> 70L</span>
+        </div>
+        <h3>$80.00 / day</h3>
+      </div>
+
+      <div class="reviews">
+        <h3>Reviews (13)</h3>
+        <div class="review-item">
+          <img src="https://i.pravatar.cc/50?img=12" alt="Alex Stanton">
+          <div>
+            <h4>Alex Stanton <span style="color:#6b7280;font-size:13px;">· CEO at Bukalapak</span></h4>
+            <p>We are very happy with the service from the MORENT App. Morent has low price and also a large variety of cars with good and comfortable facilities.</p>
+          </div>
+        </div>
+        <div class="review-item">
+          <img src="https://i.pravatar.cc/50?img=15" alt="Skylar Dias">
+          <div>
+            <h4>Skylar Dias <span style="color:#6b7280;font-size:13px;">· CEO at Amazon</span></h4>
+            <p>We are greatly helped by the services of the MORENT Application. The officers are very friendly and polite. Thank you Morent!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="rent-box">
+        <h3>Rent This Car</h3>
+        <p>Starting from</p>
+        <h2>$80.00 / day</h2>
+        <!-- Nút bấm chuyển hướng -->
+        <button id="rentNowBtn">Rent Now</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="top">
+      <div>
+        <div class="logo">MORENT</div>
+        <p class="desc">Our vision is to provide convenience and help increase your sales business.</p>
+      </div>
+      <div class="links">
+        <div>
+          <h4>About</h4>
+          <a href="#">How it works</a>
+          <a href="#">Featured</a>
+          <a href="#">Partnership</a>
+          <a href="#">Business Relation</a>
+        </div>
+        <div>
+          <h4>Community</h4>
+          <a href="#">Events</a>
+          <a href="#">Blog</a>
+          <a href="#">Podcast</a>
+          <a href="#">Invite a friend</a>
+        </div>
+        <div>
+          <h4>Socials</h4>
+          <a href="#">Discord</a>
+          <a href="#">Instagram</a>
+          <a href="#">Twitter</a>
+          <a href="#">Facebook</a>
+        </div>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>©2022 MORENT. All rights reserved</span>
+      <div>
+        <a href="#">Privacy & Policy</a> |
+        <a href="#">Terms & Condition</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Khi bấm "Rent Now", chuyển sang trang rental_form.html
+    document.getElementById("rentNowBtn").addEventListener("click", function() {
+      window.location.href = "rental_form.html";
+    });
+  </script>
+</body>
+</html>
