@@ -12,9 +12,9 @@
       <aside class="sidebar">
         <h2 class="logo">MORENT</h2>
         <nav class="menu">
-          <a href="admin_dashboard.html"><img src="../image/home.svg" class="icon"> Dashboard</a>
-          <a href="car_rent.html"><img src="../image/car.svg" class="icon"> Car Rent</a>
-          <a href="admin_users.html"><img src="../image/person.svg" class="icon"> User</a>
+          <a href="index.html"><img src="../image/home.svg" class="icon"> Home</a>
+          <a href="my_contracts.html" class="active"><img src="../image/car.svg" class="icon"> My Contracts</a>
+          <a href="profile.html"><img src="../image/person.svg" class="icon"> Profile</a>
         </nav>
       </aside>
 
@@ -32,15 +32,43 @@
         <section class="content">
           <div class="left-panel left-panel-full">
             <div class="card">
-              <div class="header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="header filter-header">
                 <h3>My Contracts</h3>
-                <div>
-                  <button id="refreshBtn" class="btn">Refresh</button>
+                <div class="filter-controls">
+                  <select id="statusFilter" class="status-filter">
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Terminated">Terminated</option>
+                  </select>
+                  <button id="refreshBtn" class="btn-primary">Refresh</button>
                 </div>
               </div>
 
+              <!-- Stats Cards -->
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <p>Total Contracts</p>
+                  <h4 id="totalContracts">0</h4>
+                </div>
+                <div class="stat-card">
+                  <p>Active</p>
+                  <h4 id="activeContracts">0</h4>
+                </div>
+                <div class="stat-card">
+                  <p>Pending</p>
+                  <h4 id="pendingContracts">0</h4>
+                </div>
+                <div class="stat-card">
+                  <p>Completed</p>
+                  <h4 id="completedContracts">0</h4>
+                </div>
+              </div>
+
+              <!-- Contracts Table -->
               <div class="table-container">
-                <table id="contractsTable">
+                <table id="contractsTable" class="contract-table">
                   <thead>
                     <tr>
                       <th>Contract ID</th>
@@ -49,11 +77,11 @@
                       <th>Period</th>
                       <th>Status</th>
                       <th>Deposit</th>
-                      <th>Total</th>
+                      <th>Total Price</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody id="contractsTableBody">
                     <tr><td colspan="8" class="table-empty">Loading contracts...</td></tr>
                   </tbody>
                 </table>
@@ -61,6 +89,7 @@
             </div>
           </div>
 
+          <!-- RIGHT PANEL - Contract Details -->
           <div class="right-panel">
             <div class="card rental-details" id="contractDetails">
               <h3>Contract Details</h3>
@@ -72,28 +101,60 @@
                 </div>
                 <span id="detailContractId">-</span>
               </div>
+              
+              <div class="contract-detail-section">
+                <p class="contract-detail-label">Contract Type</p>
+                <p class="contract-detail-value" id="detailContractType">-</p>
+              </div>
+              
+              <div class="contract-detail-section">
+                <p class="contract-detail-label">Transaction Hash (TXHash)</p>
+                <p class="contract-detail-hash" id="detailTXHash">-</p>
+              </div>
+              
               <div class="pickup-drop">
                 <div>
-                  <h5>Start</h5>
+                  <h5>Start Date</h5>
                   <p id="detailStartDate">-</p>
                 </div>
                 <div>
-                  <h5>End</h5>
+                  <h5>End Date</h5>
                   <p id="detailEndDate">-</p>
                 </div>
               </div>
-              <div class="total-price">
-                <p>Deposit</p>
+              
+              <div class="contract-customer-info">
+                <h5>Counterparty</h5>
+                <p>Name: <span id="detailCounterpartyName">-</span></p>
+                <p>Email: <span id="detailCounterpartyEmail">-</span></p>
+              </div>
+              
+              <div class="contract-payment-info">
+                <h5>Payment Information</h5>
+                <p>Installment Amount: <span id="detailInstallmentAmount">-</span></p>
+                <p>Paid Periods: <span id="detailPaidPeriods">-</span> / <span id="detailTotalPeriods">-</span></p>
+                <p>Next Payment Due: <span id="detailNextPayment">-</span></p>
+              </div>
+              
+              <div class="total-price contract-price-box">
+                <p>Deposit Amount</p>
                 <h3 id="detailDeposit">-</h3>
               </div>
+              
               <div class="total-price">
                 <p>Total Price</p>
                 <h3 id="detailTotalPrice">-</h3>
               </div>
-              <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
-                <button id="payBtn" class="btn btn-primary">Pay</button>
-                <button id="viewOnChain" class="btn">View on Blockchain</button>
+              
+              <div class="contract-actions">
+                <button id="payBtn" class="btn-primary">Pay Installment</button>
+                <button id="viewOnChain" class="btn-secondary">View on Blockchain</button>
               </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="card" id="emptyState">
+              <p>Select a contract to view details</p>
             </div>
           </div>
         </section>

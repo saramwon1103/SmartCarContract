@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home | Morent</title>
+  <link rel="stylesheet" href="../css/admin_dashboard.css" />
+  <link rel="stylesheet" href="../css/index.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">MORENT</h2>
+      <nav class="menu">
+        <a class="active" href="index.html"><img src="../image/home.svg" class="icon"> Home</a>
+        <a href="my_contracts.html"><img src="../image/car.svg" class="icon"> My Contracts</a>
+        <a href="profile.html"><img src="../image/person.svg" class="icon"> Profile</a>
+      </nav>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input type="text" placeholder="Search for cars..." />
+          <span class="filter"><img src="../image/search.svg" alt="Search icon" class="icon"></span>
+        </div>
+        <div class="user-icons">
+          <span><img src="../image/heart.svg" alt="Heart icon" class="icon"></span>
+          <span><img src="../image/notification.svg" alt="Bell icon" class="icon"></span>
+          <span><img src="../image/setting.svg" alt="Settings icon" class="icon"></span>
+          <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- Car Listing -->
+        <div class="left-panel left-panel-full">
+          <div class="card">
+            <div class="header filter-header">
+              <h3>Available Cars</h3>
+              <div class="filter-controls">
+                <select class="status-filter">
+                  <option value="">All Types</option>
+                  <option value="sport">Sport</option>
+                  <option value="suv">SUV</option>
+                  <option value="coupe">Coupe</option>
+                  <option value="hatchback">Hatchback</option>
+                  <option value="mpv">MPV</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="car-grid">
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+                <h4>Nissan GT – R</h4>
+                <p>Sport Car</p>
+                <div class="car-footer">
+                  <h3>$80.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8jjq1/s3/koenigsegg.jpg" alt="Koenigsegg">
+                <h4>Koenigsegg</h4>
+                <p>Sport Car</p>
+                <div class="car-footer">
+                  <h3>$99.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/0ANRm/s3/rolls-royce-dawn.jpg" alt="Rolls Royce">
+                <h4>Rolls – Royce</h4>
+                <p>Sport Car</p>
+                <div class="car-footer">
+                  <h3>$96.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/nGvvk/s3/honda-cr-v.jpg" alt="CR-V">
+                <h4>CR – V</h4>
+                <p>SUV</p>
+                <div class="car-footer">
+                  <h3>$80.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+                <h4>All New Rush</h4>
+                <p>SUV</p>
+                <div class="car-footer">
+                  <h3>$72.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+                <h4>CR – V</h4>
+                <p>SUV</p>
+                <div class="car-footer">
+                  <h3>$80.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+                <h4>MG ZX Excite</h4>
+                <p>Hatchback</p>
+                <div class="car-footer">
+                  <h3>$76.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+
+              <div class="car-card" onclick="window.location.href='car_detail.html'">
+                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
+                <h4>New MG ZS</h4>
+                <p>SUV</p>
+                <div class="car-footer">
+                  <h3>$80.00 / day</h3>
+                  <button class="btn-rent">Rent Now</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+
