@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Connection Demo - MORENT</title>
+    <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #F6F7F9;
+            min-height: 100vh;
+        }
+        .demo-content {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 40px 64px;
+        }
+        .demo-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1A202C;
+            margin-bottom: 16px;
+        }
+        .demo-description {
+            font-size: 16px;
+            color: #596780;
+            margin-bottom: 32px;
+        }
+        .demo-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #E8EAED;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: #6E66FA;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include Header -->
+    <header class="header">
+        <div class="header-container">
+            <!-- Logo -->
+            <div class="logo">
+                <span class="logo-text">MORENT</span>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search something here">
+                    <i class="fa-solid fa-sliders filter-icon"></i>
+                </div>
+            </div>
+
+            <!-- Right Icons -->
+            <div class="header-actions">
+                <button class="connect-wallet-btn" id="connectWalletBtn">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Connect Wallet</span>
+                </button>
+                <button class="icon-btn">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+                <button class="icon-btn notification-btn">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <button class="icon-btn">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <div class="profile-avatar">
+                    <img src="https://via.placeholder.com/44" alt="Profile">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Connect Wallet Modal -->
+    <div class="wallet-modal-overlay" id="walletModalOverlay">
+        <div class="wallet-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Connect Wallet</h2>
+                <button class="modal-close" id="modalCloseBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="wallet-list">
+                    <!-- Phantom Wallet -->
+                    <button class="wallet-option" data-wallet="phantom">
+                        <span class="wallet-name">Phantom</span>
+                        <div class="wallet-icon phantom-icon">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="16" fill="#AB9FF2"/>
+                                <path d="M16 8C11.6 8 8 11.6 8 16C8 20.4 11.6 24 16 24C20.4 24 24 20.4 24 16C24 11.6 20.4 8 16 8ZM14 17C13.4 17 13 16.6 13 16C13 15.4 13.4 15 14 15C14.6 15 15 15.4 15 16C15 16.6 14.6 17 14 17ZM18 17C17.4 17 17 16.6 17 16C17 15.4 17.4 15 18 15C18.6 15 19 15.4 19 16C19 16.6 18.6 17 18 17Z" fill="white"/>
+                            </svg>
+                        </div>
+                    </button>
+
+                    <!-- Slope Wallet -->
+                    <button class="wallet-option" data-wallet="slope">
+                        <span class="wallet-name">Slope</span>
+                        <div class="wallet-icon slope-icon">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="16" fill="#6E66FA"/>
+                                <path d="M12 10L20 22L16 18L12 10Z" fill="white"/>
+                                <path d="M20 10L12 22L16 18L20 10Z" fill="white" opacity="0.6"/>
+                            </svg>
+                        </div>
+                    </button>
+
+                    <!-- Solflare Wallet -->
+                    <button class="wallet-option" data-wallet="solflare">
+                        <span class="wallet-name">Solflare</span>
+                        <div class="wallet-icon solflare-icon">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                <circle cx="16" cy="16" r="16" fill="#FF6B00"/>
+                                <path d="M16 8L8 16L16 24L24 16L16 8Z" fill="white"/>
+                                <path d="M16 12L12 16L16 20L20 16L16 12Z" fill="#FF6B00"/>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- More Options Dropdown -->
+                <button class="more-options-btn" id="moreOptionsBtn">
+                    <span>More options</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+
+                <!-- Additional Wallets (Hidden by default) -->
+                <div class="additional-wallets" id="additionalWallets">
+                    <div class="wallet-list">
+                        <!-- MetaMask -->
+                        <button class="wallet-option" data-wallet="metamask">
+                            <span class="wallet-name">MetaMask</span>
+                            <div class="wallet-icon metamask-icon">
+                                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                    <path d="M28 8L18 15L20 10L28 8Z" fill="#E17726"/>
+                                    <path d="M4 8L14 15L12 10L4 8Z" fill="#E27625"/>
+                                    <path d="M24 21L22 25L27 26L28 21H24Z" fill="#E27625"/>
+                                    <path d="M4 21L5 26L10 25L8 21H4Z" fill="#E27625"/>
+                                    <path d="M16 13L14 15L18 15L16 13Z" fill="#E27625"/>
+                                </svg>
+                            </div>
+                        </button>
+
+                        <!-- WalletConnect -->
+                        <button class="wallet-option" data-wallet="walletconnect">
+                            <span class="wallet-name">WalletConnect</span>
+                            <div class="wallet-icon walletconnect-icon">
+                                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                    <rect width="32" height="32" rx="16" fill="#3B99FC"/>
+                                    <path d="M10 14C12.2 11.8 15.8 11.8 18 14L18.5 14.5C18.6 14.6 18.6 14.8 18.5 14.9L17.5 15.9C17.4 16 17.2 16 17.1 15.9L16.4 15.2C15 13.8 12.8 13.8 11.4 15.2L10.7 15.9C10.6 16 10.4 16 10.3 15.9L9.3 14.9C9.2 14.8 9.2 14.6 9.3 14.5L10 14ZM20.7 16.2L21.6 17.1C21.7 17.2 21.7 17.4 21.6 17.5L17.4 21.7C17.3 21.8 17.1 21.8 17 21.7L14 18.7C13.95 18.65 13.85 18.65 13.8 18.7L10.8 21.7C10.7 21.8 10.5 21.8 10.4 21.7L6.2 17.5C6.1 17.4 6.1 17.2 6.2 17.1L7.1 16.2C7.2 16.1 7.4 16.1 7.5 16.2L10.5 19.2C10.55 19.25 10.65 19.25 10.7 19.2L13.7 16.2C13.8 16.1 14 16.1 14.1 16.2L17.1 19.2C17.15 19.25 17.25 19.25 17.3 19.2L20.3 16.2C20.4 16.1 20.6 16.1 20.7 16.2Z" fill="white"/>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Content -->
+    <div class="demo-content">
+        <h1 class="demo-title">Wallet Connection Feature</h1>
+        <p class="demo-description">Click the "Connect Wallet" button in the header to test the wallet connection modal.</p>
+        
+        <div class="demo-card">
+            <h3 style="margin-bottom: 16px; color: #1A202C;">Features:</h3>
+            <ul class="feature-list">
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Modern gradient button design matching MORENT's brand</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Smooth modal animation with backdrop blur</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Support for multiple wallets: Phantom, Slope, Solflare, MetaMask, WalletConnect</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Expandable "More options" section</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Light/Dark mode support</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Responsive design for mobile devices</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>LocalStorage integration to remember connected wallet</span>
+                </li>
+                <li>
+                    <span class="feature-icon"><i class="fa-solid fa-check"></i></span>
+                    <span>Close modal with ESC key or clicking outside</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="../js/wallet.js"></script>
+</body>
+</html>

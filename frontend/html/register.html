@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - MORENT</title>
+    <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css">
+    <link rel="stylesheet" href="../css/register.css">
+</head>
+<body>
+    <!-- Register Container -->
+    <div class="register-container">
+        <div class="register-wrapper">
+            <!-- Left Side - Form -->
+            <div class="register-form-container">
+                <div class="register-form-wrapper">
+                    <div class="form-header">
+                        <h2 class="form-title">Create Account</h2>
+                        <p class="form-subtitle">Sign up now and start exploring amazing cars</p>
+                    </div>
+
+                    <form class="register-form" id="registerForm">
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label for="fullName" class="form-label">Full Name</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-user input-icon"></i>
+                                <input 
+                                    type="text" 
+                                    id="fullName" 
+                                    name="fullName" 
+                                    class="form-input"
+                                    placeholder="Enter your full name"
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="email" class="form-label">Email Address</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-envelope input-icon"></i>
+                                <input 
+                                    type="email" 
+                                    id="email" 
+                                    name="email" 
+                                    class="form-input"
+                                    placeholder="Enter your email"
+                                    required
+                                >
+                                <span class="validation-icon"></span>
+                            </div>
+                            <span class="validation-message"></span>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="form-group">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-phone input-icon"></i>
+                                <input 
+                                    type="tel" 
+                                    id="phone" 
+                                    name="phone" 
+                                    class="form-input"
+                                    placeholder="Enter your phone number"
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock input-icon"></i>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password" 
+                                    class="form-input"
+                                    placeholder="Create a password"
+                                    required
+                                    minlength="8"
+                                >
+                                <button type="button" class="toggle-password" onclick="togglePassword('password')">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                            <!-- Password Strength Indicator -->
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-progress" id="strengthProgress"></div>
+                                </div>
+                                <span class="strength-text" id="strengthText">Password strength</span>
+                            </div>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="form-group">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-lock input-icon"></i>
+                                <input 
+                                    type="password" 
+                                    id="confirmPassword" 
+                                    name="confirmPassword" 
+                                    class="form-input"
+                                    placeholder="Confirm your password"
+                                    required
+                                >
+                                <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                            <span class="validation-message" id="passwordMatch"></span>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="terms" id="terms" required>
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    I agree to the <a href="#" class="terms-link">Terms & Conditions</a> 
+                                    and <a href="#" class="terms-link">Privacy Policy</a>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Newsletter -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="newsletter" id="newsletter">
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">Send me news and special offers</span>
+                            </label>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="submit-btn">
+                            <span>Create Account</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+
+                        <div class="divider">
+                            <span>Or sign up with</span>
+                        </div>
+
+                        <!-- Social Login -->
+                        <div class="social-login">
+                            <button type="button" class="social-btn google-btn">
+                                <i class="fa-brands fa-google"></i>
+                                <span>Google</span>
+                            </button>
+                            <button type="button" class="social-btn facebook-btn">
+                                <i class="fa-brands fa-facebook"></i>
+                                <span>Facebook</span>
+                            </button>
+                        </div>
+
+                        <!-- Form Footer -->
+                        <div class="form-footer">
+                            <p>Already have an account? <a href="login.html" class="login-link">Sign In</a></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Side - Info Banner -->
+            <div class="register-banner">
+                <div class="banner-content">
+                    <h1 class="banner-title">Join MORENT Today</h1>
+                    <p class="banner-description">Experience the best car rental service with exclusive benefits</p>
+                    
+                    <div class="benefits-list">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fa-solid fa-car"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h3>Wide Selection</h3>
+                                <p>Choose from hundreds of luxury and economy cars</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fa-solid fa-shield-check"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h3>Safe & Secure</h3>
+                                <p>Your data is protected with industry-standard encryption</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fa-solid fa-dollar-sign"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h3>Best Prices</h3>
+                                <p>Get exclusive deals and member-only discounts</p>
+                            </div>
+                        </div>
+                        
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <i class="fa-solid fa-headset"></i>
+                            </div>
+                            <div class="benefit-text">
+                                <h3>24/7 Support</h3>
+                                <p>Our team is always ready to help you anytime</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="banner-stats">
+                    <div class="stat-item">
+                        <h3 class="stat-number">10K+</h3>
+                        <p class="stat-label">Happy Customers</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3 class="stat-number">500+</h3>
+                        <p class="stat-label">Premium Cars</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3 class="stat-number">50+</h3>
+                        <p class="stat-label">City Locations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle Password Visibility
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const toggleBtn = passwordInput.nextElementSibling;
+            const icon = toggleBtn.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Password Strength Checker
+        const passwordInput = document.getElementById('password');
+        const strengthProgress = document.getElementById('strengthProgress');
+        const strengthText = document.getElementById('strengthText');
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            
+            if (password.length >= 8) strength += 25;
+            if (password.match(/[a-z]/)) strength += 25;
+            if (password.match(/[A-Z]/)) strength += 25;
+            if (password.match(/[0-9]/)) strength += 12.5;
+            if (password.match(/[^a-zA-Z0-9]/)) strength += 12.5;
+            
+            strengthProgress.style.width = strength + '%';
+            
+            if (strength < 25) {
+                strengthProgress.style.backgroundColor = '#ED3F3F';
+                strengthText.textContent = 'Weak password';
+                strengthText.style.color = '#ED3F3F';
+            } else if (strength < 50) {
+                strengthProgress.style.backgroundColor = '#FFA800';
+                strengthText.textContent = 'Fair password';
+                strengthText.style.color = '#FFA800';
+            } else if (strength < 75) {
+                strengthProgress.style.backgroundColor = '#54A6FF';
+                strengthText.textContent = 'Good password';
+                strengthText.style.color = '#54A6FF';
+            } else {
+                strengthProgress.style.backgroundColor = '#1AC847';
+                strengthText.textContent = 'Strong password';
+                strengthText.style.color = '#1AC847';
+            }
+        });
+
+        // Password Match Validation
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const passwordMatchMsg = document.getElementById('passwordMatch');
+
+        confirmPasswordInput.addEventListener('input', function() {
+            if (this.value !== passwordInput.value) {
+                passwordMatchMsg.textContent = 'Passwords do not match';
+                passwordMatchMsg.style.color = '#ED3F3F';
+                this.parentElement.classList.add('error');
+            } else {
+                passwordMatchMsg.textContent = 'Passwords match';
+                passwordMatchMsg.style.color = '#1AC847';
+                this.parentElement.classList.remove('error');
+            }
+        });
+
+        // Form Submission
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                confirmPassword: document.getElementById('confirmPassword').value,
+                terms: document.getElementById('terms').checked,
+                newsletter: document.getElementById('newsletter').checked
+            };
+            
+            // Validate passwords match
+            if (formData.password !== formData.confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            // Validate terms
+            if (!formData.terms) {
+                alert('Please accept the Terms & Conditions');
+                return;
+            }
+            
+            // Here you would typically send the data to your backend
+            console.log('Registration data:', formData);
+            
+            // For demo purposes
+            alert('Account created successfully!');
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>

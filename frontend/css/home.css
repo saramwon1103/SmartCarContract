@@ -1,0 +1,476 @@
+﻿/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #F6F7F9;
+    color: #1A202C;
+    line-height: 1.5;
+}
+
+/* Header & Footer Iframe Styles */
+#header-frame {
+    width: 100%;
+    height: 124px;
+    display: block;
+}
+
+#footer-frame {
+    width: 100%;
+    height: 425px;
+    display: block;
+    margin-top: 64px;
+}
+
+/* Main Container */
+.home-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 64px;
+}
+
+/* Hero Section */
+.hero-section {
+    display: grid;
+    grid-template-columns: 640px 640px;
+    gap: 32px;
+    margin-top: 32px;
+    margin-bottom: 32px;
+    justify-content: center;
+}
+
+/* Hero Banners */
+.hero-left,
+.hero-right {
+    position: relative;
+    min-height: 360px;
+    border-radius: 10px;
+    padding: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hero-left {
+    background: linear-gradient(135deg, #54A6FF 0%, #4B9DE8 100%);
+}
+
+.hero-right {
+    background: linear-gradient(135deg, #3563E9 0%, #2952CC 100%);
+}
+
+/* Hero Patterns - Using pseudo-elements for decoration */
+.hero-left::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.04) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+.hero-right::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(60deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+        linear-gradient(-60deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%);
+    background-size: 40px 70px;
+    pointer-events: none;
+}
+
+/* Hero Content */
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 284px;
+}
+
+.hero-title {
+    font-size: 32px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.hero-description {
+    font-size: 16px;
+    color: white;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.rental-btn {
+    width: 120px;
+    height: 44px;
+    background: #3563E9;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.rental-btn:hover {
+    background: #2952CC;
+    box-shadow: 0 4px 12px rgba(53, 99, 233, 0.4);
+    transform: translateY(-2px);
+}
+
+.hero-left .rental-btn {
+    background: white;
+    color: #3563E9;
+}
+
+.hero-left .rental-btn:hover {
+    background: #F6F7F9;
+}
+
+/* Hero Car Images */
+.hero-car-image {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 340px;
+    height: 120px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: bottom right;
+    z-index: 1;
+}
+
+.left-car {
+    background-image: url('../image/hero-car1.png');
+}
+
+.right-car {
+    background-image: url('../image/hero-car2.png');
+}
+
+/* Section Headers */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #90A3BF;
+}
+
+.view-all {
+    font-size: 16px;
+    font-weight: 600;
+    color: #3563E9;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.view-all:hover {
+    color: #2952CC;
+}
+
+/* Popular Section */
+.popular-section {
+    margin-bottom: 32px;
+}
+
+/* Recommendation Section */
+.recommendation-section {
+    margin-bottom: 64px;
+}
+
+/* Car Grid */
+.car-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+}
+
+.popular-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* Car Card */
+.car-card {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.car-card:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+}
+
+/* Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 72px;
+}
+
+.car-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A202C;
+    margin-bottom: 4px;
+}
+
+.car-category {
+    font-size: 14px;
+    color: #90A3BF;
+    font-weight: 700;
+}
+
+/* Heart Icon */
+.heart-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: #90A3BF;
+    transition: all 0.3s ease;
+    padding: 4px;
+}
+
+.heart-icon:hover {
+    color: #ED3F3F;
+    transform: scale(1.1);
+}
+
+.heart-icon.active {
+    color: #ED3F3F;
+}
+
+/* Car Image Container */
+.car-image-container {
+    text-align: center;
+    margin-bottom: 60px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.car-img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Car Specs */
+.car-specs {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #90A3BF;
+    font-weight: 500;
+}
+
+.spec-item i {
+    font-size: 14px;
+    color: #90A3BF;
+}
+
+/* Card Footer */
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pricing {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.current-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A202C;
+}
+
+.current-price .day {
+    font-size: 14px;
+    color: #90A3BF;
+    font-weight: 500;
+}
+
+.original-price {
+    font-size: 14px;
+    color: #90A3BF;
+    text-decoration: line-through;
+    font-weight: 700;
+}
+
+/* Rent Button */
+.rent-btn {
+    width: 116px;
+    height: 44px;
+    background: #3563E9;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.rent-btn:hover {
+    background: #2952CC;
+    box-shadow: 0 4px 12px rgba(53, 99, 233, 0.3);
+}
+
+/* Show More Section */
+.show-more-container {
+    text-align: center;
+    margin-top: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.show-more-btn {
+    background: #3563E9;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 0 auto;
+}
+
+.show-more-btn:hover {
+    background: #2952CC;
+    box-shadow: 0 4px 12px rgba(53, 99, 233, 0.3);
+}
+
+.show-more-btn i {
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+.total-cars {
+    font-size: 14px;
+    color: #90A3BF;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+    .home-container {
+        padding: 0 32px;
+    }
+
+    .hero-section {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 1200px) {
+    .car-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .hero-section {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .hero-left,
+    .hero-right {
+        min-height: 320px;
+    }
+
+    .car-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .home-container {
+        padding: 0 16px;
+    }
+
+    .hero-title {
+        font-size: 24px;
+    }
+
+    .hero-description {
+        font-size: 14px;
+    }
+
+    .hero-car-image {
+        width: 240px;
+        height: 80px;
+    }
+
+    #header-frame {
+        height: auto;
+        min-height: 80px;
+    }
+
+    #footer-frame {
+        height: auto;
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 576px) {
+    .car-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-header {
+        margin-bottom: 40px;
+    }
+
+    .car-image-container {
+        margin-bottom: 32px;
+    }
+
+    .show-more-container {
+        flex-direction: column;
+        gap: 16px;
+    }
+}

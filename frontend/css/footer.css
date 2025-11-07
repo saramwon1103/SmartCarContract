@@ -1,0 +1,197 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.footer {
+    width: 100%;
+    background: white;
+    border-top: 1px solid rgba(195, 212, 233, 0.4);
+    margin-top: auto;
+}
+
+.footer-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 80px 60px 60px;
+}
+
+/* Footer Top */
+.footer-top {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 100px;
+    margin-bottom: 60px;
+}
+
+/* Brand Section */
+.footer-brand {
+    max-width: 292px;
+}
+
+.footer-logo {
+    font-size: 32px;
+    font-weight: 700;
+    color: #3563E9;
+    margin-bottom: 16px;
+    letter-spacing: -0.03em;
+}
+
+.footer-description {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 200%;
+    color: rgba(19, 19, 19, 0.6);
+}
+
+/* Footer Links */
+.footer-links {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 60px;
+}
+
+.footer-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.footer-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1A202C;
+    margin-bottom: 24px;
+}
+
+.footer-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.footer-link {
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(19, 19, 19, 0.6);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-link:hover {
+    color: #3563E9;
+}
+
+/* Footer Bottom */
+.footer-bottom {
+    padding-top: 36px;
+    border-top: 1px solid rgba(19, 19, 19, 0.16);
+}
+
+.footer-bottom-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.copyright {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A202C;
+}
+
+.footer-legal {
+    display: flex;
+    gap: 60px;
+}
+
+.legal-link {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A202C;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.legal-link:hover {
+    color: #3563E9;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .footer-container {
+        padding: 60px 40px 40px;
+    }
+
+    .footer-top {
+        gap: 60px;
+    }
+
+    .footer-links {
+        gap: 40px;
+    }
+
+    .footer-legal {
+        gap: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .footer-container {
+        padding: 40px 24px 24px;
+    }
+
+    .footer-top {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        margin-bottom: 40px;
+    }
+
+    .footer-brand {
+        max-width: 100%;
+    }
+
+    .footer-links {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+    }
+
+    .footer-bottom-content {
+        flex-direction: column;
+        gap: 24px;
+        align-items: flex-start;
+    }
+
+    .footer-legal {
+        gap: 24px;
+    }
+
+    .copyright,
+    .legal-link {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-links {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-logo {
+        font-size: 28px;
+    }
+
+    .footer-description,
+    .footer-link {
+        font-size: 14px;
+    }
+
+    .footer-title {
+        font-size: 18px;
+    }
+}
