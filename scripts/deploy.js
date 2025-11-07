@@ -1,0 +1,27 @@
+import pkg from "hardhat";
+const { ethers } = pkg;
+
+async function main() {
+  const [admin, owner, user] = await ethers.getSigners();
+
+  console.log("👤 Admin:", admin.address);
+  console.log("👤 Owner:", owner.address);
+  console.log("👤 User:", user.address);
+
+  // 1️⃣ Deploy token
+  const Token = await ethers.getContractFactory("CarPayToken");
+  const token = await Token.deploy(owner.address);
+  await token.waitForDeployment();
+  console.log("✅ Token deployed at:", await token.getAddress());
+
+  // 2️⃣ Deploy factory
+  const Factory = await ethers.getContractFactory("RentalAgreementFactory");
+  const factory = await Factory.deploy();
+  await factory.waitForDeployment();
+  console.log("🏗️ Factory deployed at:", await factory.getAddress());
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
