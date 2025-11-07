@@ -13,6 +13,7 @@ contract RentalAgreementFactory {
         admin = msg.sender; // Người deploy là Admin
     }
 
+    // ✅ Tạo hợp đồng mới giữa Owner và User
     function createAgreement(
         address _owner,
         address _user,
