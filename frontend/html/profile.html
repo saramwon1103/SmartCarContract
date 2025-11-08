@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile | Morent</title>
+  <link rel="stylesheet" href="../css/admin_dashboard.css" />
+  <link rel="stylesheet" href="../css/profile.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <script src="../js/user_sidebar.js"></script>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input type="text" placeholder="Search..." />
+          <span class="filter">
+            <img src="../image/search.svg" alt="Search" class="icon" />
+          </span>
+        </div>
+        <div class="user-icons">
+          <img id="topAvatar" src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="card">
+          <!-- Header chứa avatar + icon edit -->
+          <div class="profile-header">
+            <div class="profile-info-left">
+              <img id="profileImage" src="https://i.pravatar.cc/120" alt="Profile" />
+              <input type="file" id="upload" style="display:none" accept="image/*" onchange="previewImage(event)" />
+            </div>
+            <i class="fa-solid fa-pen-to-square edit-icon" id="editBtn" title="Edit Profile"></i>
+          </div>
+
+          <form class="profile-form" id="profileForm">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" id="fullName" readonly />
+            </div>
+
+            <div class="form-group">
+              <label>Role</label>
+              <input type="text" id="role" readonly />
+            </div>
+
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="email" readonly />
+            </div>
+
+            <div class="form-group">
+              <label>Wallet Address</label>
+              <input type="text" id="wallet" readonly />
+            </div>
+
+            <button type="submit" class="save-btn" id="saveBtn">Save Changes</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getDatabase, ref, get, child, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "XXXX",
+      appId: "XXXX"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const userId = localStorage.getItem("userId") || "U001";
+
+    // --- Load dữ liệu ---
+    get(child(ref(db), `Users/${userId}`)).then(snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("profileImage").src = data.photoURL || "https://i.pravatar.cc/120";
+        document.getElementById("topAvatar").src = data.photoURL || "https://i.pravatar.cc/40";
+        document.getElementById("fullName").value = data.fullName || "";
+        document.getElementById("role").value = data.role || "";
+        document.getElementById("email").value = data.email || "";
+        document.getElementById("phone").value = data.phone || "";
+        document.getElementById("wallet").value = data.walletAddress || "";
+      }
+    });
+
+    // --- Bật chế độ edit ---
+    const editBtn = document.getElementById("editBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const inputs = document.querySelectorAll("#profileForm input");
+
+    editBtn.addEventListener("click", () => {
+      inputs.forEach(input => input.removeAttribute("readonly"));
+      saveBtn.style.display = "block";
+    });
+
+    // --- Lưu thông tin ---
+    document.getElementById("profileForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const updatedData = {
+        fullName: fullName.value,
+        role: role.value,
+        email: email.value,
+        phone: phone.value,
+        walletAddress: wallet.value
+      };
+
+      update(ref(db, `Users/${userId}`), updatedData)
+        .then(() => {
+          alert("Profile updated successfully!");
+          inputs.forEach(input => input.setAttribute("readonly", true));
+          saveBtn.style.display = "none";
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Failed to update profile!");
+        });
+    });
+
+    // --- Xem trước ảnh ---
+    window.previewImage = function (event) {
+      const img = document.getElementById("profileImage");
+      img.src = URL.createObjectURL(event.target.files[0]);
+    };
+  </script>
+</body>
+
+</html>
