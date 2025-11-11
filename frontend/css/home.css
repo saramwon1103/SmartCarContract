@@ -26,34 +26,47 @@ body {
     margin-top: 64px;
 }
 
-/* Main Container */
+/* Main Container - Adjusted for dashboard layout */
 .home-container {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 0 64px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
-/* Hero Section */
+/* Ensure content sections don't overflow */
+.home-container > section {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Hero Section - Responsive grid */
 .hero-section {
     display: grid;
-    grid-template-columns: 640px 640px;
-    gap: 32px;
-    margin-top: 32px;
-    margin-bottom: 32px;
-    justify-content: center;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Hero Banners */
 .hero-left,
 .hero-right {
     position: relative;
-    min-height: 360px;
+    min-height: 320px;
     border-radius: 10px;
-    padding: 24px;
+    padding: 20px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    width: 100%;
+    max-width: 100%;
 }
 
 .hero-left {
@@ -148,8 +161,8 @@ body {
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 340px;
-    height: 120px;
+    width: min(280px, 60%);
+    height: 100px;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: bottom right;
@@ -200,15 +213,18 @@ body {
     margin-bottom: 64px;
 }
 
-/* Car Grid */
+/* Car Grid - Responsive */
 .car-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .popular-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 /* Car Card */
@@ -393,47 +409,57 @@ body {
     font-weight: 500;
 }
 
-/* Responsive Design */
+/* Responsive Design - Adjusted for dashboard layout */
 @media (max-width: 1400px) {
-    .home-container {
-        padding: 0 32px;
-    }
-
     .hero-section {
         grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .hero-car-image {
+        width: min(240px, 55%);
+        height: 90px;
     }
 }
 
 @media (max-width: 1200px) {
     .car-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    .hero-left,
+    .hero-right {
+        min-height: 300px;
     }
 }
 
 @media (max-width: 992px) {
     .hero-section {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 16px;
     }
 
     .hero-left,
     .hero-right {
-        min-height: 320px;
+        min-height: 280px;
+        padding: 16px;
+    }
+    
+    .hero-car-image {
+        width: min(200px, 50%);
+        height: 80px;
     }
 
     .car-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
     }
 }
 
 @media (max-width: 768px) {
-    .home-container {
-        padding: 0 16px;
-    }
-
     .hero-title {
-        font-size: 24px;
+        font-size: 22px;
     }
 
     .hero-description {
@@ -441,18 +467,14 @@ body {
     }
 
     .hero-car-image {
-        width: 240px;
-        height: 80px;
+        width: min(180px, 45%);
+        height: 70px;
     }
-
-    #header-frame {
-        height: auto;
-        min-height: 80px;
-    }
-
-    #footer-frame {
-        height: auto;
-        min-height: 400px;
+    
+    .hero-left,
+    .hero-right {
+        min-height: 260px;
+        padding: 16px;
     }
 }
 

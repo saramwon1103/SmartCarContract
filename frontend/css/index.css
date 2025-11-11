@@ -79,6 +79,42 @@
   min-width: 0;
 }
 
+/* Wallet Button in Topbar */
+.topbar .connect-wallet-btn {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  background: linear-gradient(135deg, #6E66FA 0%, #5B52E8 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.topbar .connect-wallet-btn:hover {
+  background: linear-gradient(135deg, #5B52E8 0%, #4B42D8 100%);
+  box-shadow: 0 4px 12px rgba(110, 102, 250, 0.3);
+  transform: translateY(-2px);
+}
+
+.topbar .connect-wallet-btn i {
+  font-size: 16px;
+}
+
+.topbar .connect-wallet-btn.connected {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.topbar .connect-wallet-btn.connected:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .car-grid {
@@ -93,6 +129,16 @@
   
   .btn-rent {
     width: 100%;
+  }
+  
+  .topbar .connect-wallet-btn span {
+    display: none;
+  }
+  
+  .topbar .connect-wallet-btn {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
   }
 }
 
