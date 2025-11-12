@@ -249,6 +249,13 @@ body {
     margin-bottom: 72px;
 }
 
+.card-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
 .car-name {
     font-size: 20px;
     font-weight: 700;
@@ -260,6 +267,36 @@ body {
     font-size: 14px;
     color: #90A3BF;
     font-weight: 700;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+    text-transform: capitalize;
+}
+
+.status-badge.available {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-badge.rented {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.status-badge.maintenance {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-badge.sold {
+    background: #E5E7EB;
+    color: #374151;
 }
 
 /* Heart Icon */
@@ -290,12 +327,36 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .car-img {
     max-width: 100%;
     height: auto;
     object-fit: contain;
+}
+
+.car-description-tooltip {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    max-width: 200px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.car-image-container:hover .car-description-tooltip {
+    opacity: 1;
 }
 
 /* Car Specs */
@@ -323,14 +384,34 @@ body {
 /* Card Footer */
 .card-footer {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
 }
 
 .pricing {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+}
+
+.price-rent,
+.price-buy {
+    display: flex;
+    flex-direction: column;
     gap: 2px;
+}
+
+.price-label {
+    font-size: 11px;
+    color: #90A3BF;
+    font-weight: 500;
+    text-transform: uppercase;
 }
 
 .current-price {
@@ -345,6 +426,12 @@ body {
     font-weight: 500;
 }
 
+.buy-price {
+    font-size: 16px;
+    font-weight: 600;
+    color: #3563E9;
+}
+
 .original-price {
     font-size: 14px;
     color: #90A3BF;
@@ -354,7 +441,7 @@ body {
 
 /* Rent Button */
 .rent-btn {
-    width: 116px;
+    flex: 1;
     height: 44px;
     background: #3563E9;
     color: white;
@@ -369,6 +456,37 @@ body {
 .rent-btn:hover {
     background: #2952CC;
     box-shadow: 0 4px 12px rgba(53, 99, 233, 0.3);
+}
+
+.rent-btn:disabled {
+    background: #90A3BF;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Buy Button */
+.buy-btn {
+    flex: 1;
+    height: 44px;
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.buy-btn:hover {
+    background: #059669;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.buy-btn:disabled {
+    background: #90A3BF;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 /* Show More Section */
@@ -407,6 +525,18 @@ body {
     font-size: 14px;
     color: #90A3BF;
     font-weight: 500;
+}
+
+/* Error Message */
+.error-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #991B1B;
+    background: #FEE2E2;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 20px 0;
 }
 
 /* Responsive Design - Adjusted for dashboard layout */
