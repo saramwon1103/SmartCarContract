@@ -11,40 +11,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const editForm = document.getElementById('editForm');
   const cancelEdit = document.getElementById('cancelEdit');
 
-  async function fetchCars() {
+  // API Base URL - Update với backend URL của bạn
+  const API_BASE_URL = 'http://localhost:3000/api/admin/cars';
+
+  async function fetchCars(searchQuery = '') {
     try {
-      const res = await fetch('../../backend/admin_cars.php?action=list');
-      if (!res.ok) throw new Error('No backend');
+      const url = searchQuery 
+        ? `${API_BASE_URL}?search=${encodeURIComponent(searchQuery)}`
+        : API_BASE_URL;
+      
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to fetch cars' }));
+        throw new Error(errorData.error || 'Failed to fetch cars');
+      }
       const data = await res.json();
       return data.cars || [];
     } catch (e) {
-      // fallback sample data when backend not present
-      return [
-        { 
-          CarId: 'C001', 
-          CarName: 'Nissan GT-R', 
-          Brand: 'Nissan', 
-          ModelYear: '2020-01-01', 
-          PriceRent: 80.00, 
-          PriceBuy: 120000.00, 
-          Status: 'available',
-          ImageURL: 'https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg',
-          Description: 'Sports car with the best design and acceleration',
-          OwnerId: 'U001'
-        },
-        { 
-          CarId: 'C002', 
-          CarName: 'Koenigsegg', 
-          Brand: 'Koenigsegg', 
-          ModelYear: '2021-01-01', 
-          PriceRent: 99.00, 
-          PriceBuy: 150000.00, 
-          Status: 'rented',
-          ImageURL: 'https://cdn.motor1.com/images/mgl/8jjq1/s3/koenigsegg.jpg',
-          Description: 'Luxury supercar',
-          OwnerId: 'U002'
-        },
-      ];
+      console.error('Error fetching cars:', e);
+      alert('Error loading cars: ' + e.message);
+      return [];
     }
   }
 
@@ -130,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function openEdit(carId) {
     try {
-      // Try to fetch full car data from backend
-      const res = await fetch(`../../backend/admin_cars.php?action=get&carId=${encodeURIComponent(carId)}`);
+      // Fetch full car data from backend
+      const res = await fetch(`${API_BASE_URL}/${encodeURIComponent(carId)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.car) {
@@ -139,30 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
           editModal.classList.remove('hidden');
           return;
         }
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Car not found' }));
+        throw new Error(errorData.error || 'Failed to fetch car');
       }
     } catch (e) {
-      console.log('Backend not available, using table data');
+      console.error('Error fetching car:', e);
+      alert('Error loading car: ' + e.message);
     }
-    
-    // Fallback: pull from rendered table
-    const row = [...tableBody.children].find(r => r.children[0].textContent === carId);
-    if (!row) return;
-    
-    const carData = {
-      CarId: row.children[0].textContent,
-      CarName: row.children[2].textContent,
-      Brand: row.children[3].textContent,
-      ModelYear: row.children[4].textContent,
-      PriceRent: row.children[5].textContent.replace('$', ''),
-      PriceBuy: row.children[6].textContent.replace('$', ''),
-      Status: row.children[7].querySelector('.status-badge')?.textContent.toLowerCase() || 'available',
-      ImageURL: row.children[1].querySelector('img')?.src || '',
-      Description: '', // Description not shown in table
-      OwnerId: row.children[8].textContent
-    };
-    
-    populateEditForm(carData);
-    editModal.classList.remove('hidden');
   }
 
   function populateEditForm(car) {
@@ -211,16 +181,21 @@ document.addEventListener('DOMContentLoaded', () => {
   async function doDelete(carId) {
     if (!confirm('Delete car ' + carId + '? This action cannot be undone.')) return;
     try {
-      const res = await fetch(`../../backend/admin_cars.php?action=delete&carId=${encodeURIComponent(carId)}`, { method: 'POST' });
-      if (!res.ok) throw new Error('Delete failed');
+      const res = await fetch(`${API_BASE_URL}/${encodeURIComponent(carId)}`, { 
+        method: 'DELETE'
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Delete failed' }));
+        throw new Error(errorData.error || 'Delete failed');
+      }
+      
+      const data = await res.json();
       alert('Car deleted successfully!');
       loadAndRender();
     } catch (e) {
-      // fallback: remove row locally
-      const row = [...tableBody.children].find(r => r.children[0].textContent === carId);
-      if (row) row.remove();
-      alert('Deleted locally (backend not available)');
-      loadAndRender();
+      console.error('Error deleting car:', e);
+      alert('Error deleting car: ' + e.message);
     }
   }
 
@@ -228,38 +203,44 @@ document.addEventListener('DOMContentLoaded', () => {
     ev.preventDefault();
     
     const formData = new FormData(editForm);
+    const carId = formData.get('carId');
+    
+    // Convert FormData to JSON object
+    const carData = {
+      carId: carId,
+      carName: formData.get('carName'),
+      brand: formData.get('brand'),
+      modelYear: formData.get('modelYear'),
+      priceRent: parseFloat(formData.get('priceRent')),
+      priceBuy: parseFloat(formData.get('priceBuy')),
+      status: formData.get('status'),
+      imageURL: formData.get('imageURL'),
+      description: formData.get('description') || '',
+      ownerId: formData.get('ownerId')
+    };
     
     try {
-      const res = await fetch(`../../backend/admin_cars.php?action=update`, { 
-        method: 'POST', 
-        body: formData 
+      const res = await fetch(`${API_BASE_URL}/${encodeURIComponent(carId)}`, { 
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(carData)
       });
-      if (!res.ok) throw new Error('Save failed');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Update failed' }));
+        throw new Error(errorData.error || 'Update failed');
+      }
+      
+      const data = await res.json();
       alert('Car updated successfully!');
       editModal.classList.add('hidden');
       editForm.reset();
       loadAndRender();
     } catch (e) {
-      // fallback: update the table row locally
-      const payload = Object.fromEntries(formData.entries());
-      const row = [...tableBody.children].find(r => r.children[0].textContent === payload.carId);
-      if (row) {
-        row.children[2].textContent = payload.carName;
-        row.children[3].textContent = payload.brand;
-        row.children[4].textContent = formatDate(payload.modelYear);
-        row.children[5].textContent = formatPrice(payload.priceRent);
-        row.children[6].textContent = formatPrice(payload.priceBuy);
-        row.children[7].innerHTML = `<span class="status-badge ${getStatusBadgeClass(payload.status)}">${payload.status.charAt(0).toUpperCase() + payload.status.slice(1)}</span>`;
-        row.children[8].textContent = payload.ownerId;
-        if (payload.imageURL) {
-          const img = row.children[1].querySelector('img');
-          if (img) img.src = payload.imageURL;
-        }
-      }
-      editModal.classList.add('hidden');
-      editForm.reset();
-      alert('Saved locally (backend not available)');
-      loadAndRender();
+      console.error('Error updating car:', e);
+      alert('Error updating car: ' + e.message);
     }
   });
 
@@ -291,39 +272,41 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const formData = new FormData(createForm);
     
+    // Convert FormData to JSON object
+    const carData = {
+      carName: formData.get('carName'),
+      brand: formData.get('brand'),
+      modelYear: formData.get('modelYear'),
+      priceRent: parseFloat(formData.get('priceRent')),
+      priceBuy: parseFloat(formData.get('priceBuy')),
+      status: formData.get('status'),
+      imageURL: formData.get('imageURL'),
+      description: formData.get('description') || '',
+      ownerId: formData.get('ownerId')
+    };
+    
     try {
-      const res = await fetch(`../../backend/admin_cars.php?action=create`, { 
-        method: 'POST', 
-        body: formData 
+      const res = await fetch(API_BASE_URL, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(carData)
       });
-      if (!res.ok) throw new Error('Create failed');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Create failed' }));
+        throw new Error(errorData.error || 'Create failed');
+      }
+      
+      const data = await res.json();
       alert('Car created successfully!');
       createForm.reset();
       createModal.classList.add('hidden');
       loadAndRender();
     } catch (e) {
-      // Fallback: add to table locally
-      const payload = Object.fromEntries(formData.entries());
-      const newCar = {
-        CarId: 'C' + String(Math.floor(Math.random() * 1000)).padStart(3, '0'),
-        CarName: payload.carName,
-        Brand: payload.brand,
-        ModelYear: payload.modelYear,
-        PriceRent: parseFloat(payload.priceRent),
-        PriceBuy: parseFloat(payload.priceBuy),
-        Status: payload.status,
-        ImageURL: payload.imageURL,
-        Description: payload.description || '',
-        OwnerId: payload.ownerId
-      };
-      
-      const cars = await fetchCars();
-      cars.push(newCar);
-      renderRows(cars);
-      
-      createForm.reset();
-      createModal.classList.add('hidden');
-      alert('Car created locally (backend not available)');
+      console.error('Error creating car:', e);
+      alert('Error creating car: ' + e.message);
     }
   });
 
@@ -338,18 +321,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  refreshBtn.addEventListener('click', loadAndRender);
+  refreshBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    loadAndRender();
+  });
+  
+  // Search with debounce
+  let searchTimeout;
   searchInput.addEventListener('input', async (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    const cars = await fetchCars();
-    const filtered = cars.filter(c => 
-      (c.CarName || '').toLowerCase().includes(q) || 
-      (c.Brand || '').toLowerCase().includes(q) ||
-      (c.CarId || '').toLowerCase().includes(q)
-    );
-    renderRows(filtered);
+    const q = e.target.value.trim();
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+      const cars = await fetchCars(q);
+      renderRows(cars);
+    }, 300); // Wait 300ms after user stops typing
   });
 
+  // Initial load
   loadAndRender();
 });
 
