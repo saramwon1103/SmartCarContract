@@ -7,11 +7,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Support form data
 
-// Kết nối MySQL
+// SỬA DÒNG NÀY: dùng createConnection + new
 const db = mysql.createConnection({
-  host: "localhost",      // địa chỉ database
-  user: "root",           // user MySQL
-  password: "",           // password MySQL
+  host: "localhost",
+  user: "root",
+  password: "",
   database: "CarRentalDApp"
 });
 
@@ -32,7 +32,6 @@ async function generateCarId() {
       }
       
       const lastId = results[0].CarId;
-      // Extract number from CarId (e.g., "C001" -> 1, "C0123" -> 123)
       const match = lastId.match(/\d+/);
       if (!match) return resolve("C0001");
       
@@ -45,7 +44,6 @@ async function generateCarId() {
 
 // ========== ADMIN CARS API ==========
 
-// GET /api/admin/cars - Lấy danh sách tất cả cars (với tìm kiếm)
 app.get("/api/admin/cars", (req, res) => {
   const search = req.query.search || "";
   let sql = `SELECT CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId 
@@ -70,7 +68,6 @@ app.get("/api/admin/cars", (req, res) => {
   });
 });
 
-// GET /api/admin/cars/:carId - Lấy thông tin một car cụ thể
 app.get("/api/admin/cars/:carId", (req, res) => {
   const { carId } = req.params;
   const sql = `SELECT CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId 
@@ -90,17 +87,14 @@ app.get("/api/admin/cars/:carId", (req, res) => {
   });
 });
 
-// POST /api/admin/cars - Tạo car mới
 app.post("/api/admin/cars", async (req, res) => {
   try {
     const { carName, brand, modelYear, priceRent, priceBuy, status, imageURL, description, ownerId } = req.body;
     
-    // Validation
     if (!carName || !brand || !modelYear || !priceRent || !priceBuy || !status || !imageURL || !ownerId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     
-    // Generate CarId
     const carId = await generateCarId();
     
     const sql = `INSERT INTO Cars (CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId) 
@@ -113,7 +107,6 @@ app.post("/api/admin/cars", async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
         
-        // Fetch created car
         db.query(`SELECT * FROM Cars WHERE CarId = ?`, [carId], (err2, carResults) => {
           if (err2) {
             return res.status(500).json({ error: err2.message });
@@ -127,12 +120,10 @@ app.post("/api/admin/cars", async (req, res) => {
   }
 });
 
-// PUT /api/admin/cars/:carId - Cập nhật car
 app.put("/api/admin/cars/:carId", (req, res) => {
   const { carId } = req.params;
   const { carName, brand, modelYear, priceRent, priceBuy, status, imageURL, description, ownerId } = req.body;
   
-  // Validation
   if (!carName || !brand || !modelYear || !priceRent || !priceBuy || !status || !imageURL || !ownerId) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -153,7 +144,6 @@ app.put("/api/admin/cars/:carId", (req, res) => {
         return res.status(404).json({ error: "Car not found" });
       }
       
-      // Fetch updated car
       db.query(`SELECT * FROM Cars WHERE CarId = ?`, [carId], (err2, carResults) => {
         if (err2) {
           return res.status(500).json({ error: err2.message });
@@ -163,11 +153,9 @@ app.put("/api/admin/cars/:carId", (req, res) => {
     });
 });
 
-// DELETE /api/admin/cars/:carId - Xóa car
 app.delete("/api/admin/cars/:carId", (req, res) => {
   const { carId } = req.params;
   
-  // Check if car exists
   db.query(`SELECT CarId FROM Cars WHERE CarId = ?`, [carId], (err, results) => {
     if (err) {
       console.error("Error checking car:", err);
@@ -178,7 +166,6 @@ app.delete("/api/admin/cars/:carId", (req, res) => {
       return res.status(404).json({ error: "Car not found" });
     }
     
-    // Check if car is being used in contracts
     db.query(`SELECT ContractId FROM Contracts WHERE CarId = ? LIMIT 1`, [carId], (err2, contractResults) => {
       if (err2) {
         console.error("Error checking contracts:", err2);
@@ -189,20 +176,14 @@ app.delete("/api/admin/cars/:carId", (req, res) => {
         return res.status(400).json({ error: "Cannot delete car that has existing contracts" });
       }
       
-      // Delete car images first
       db.query(`DELETE FROM CarImage WHERE CarId = ?`, [carId], (err3) => {
-        if (err3) {
-          console.error("Error deleting car images:", err3);
-          // Continue with deletion even if image deletion fails
-        }
+        if (err3) console.error("Error deleting car images:", err3);
         
-        // Delete car
         db.query(`DELETE FROM Cars WHERE CarId = ?`, [carId], (err4, results4) => {
           if (err4) {
             console.error("Error deleting car:", err4);
             return res.status(500).json({ error: err4.message });
           }
-          
           res.json({ success: true, message: "Car deleted successfully" });
         });
       });
@@ -210,14 +191,57 @@ app.delete("/api/admin/cars/:carId", (req, res) => {
   });
 });
 
-// ========== PUBLIC CARS API (for frontend home page, etc.) ==========
-
-// GET /api/cars - Lấy danh sách cars (public endpoint)
 app.get("/api/cars", (req, res) => {
   const sql = `SELECT CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId FROM Cars`;
   db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: err });
     res.json(results);
+  });
+});
+
+// =======================================
+// ========== USER API (MỚI) ==========
+// =======================================
+
+app.get("/api/user/:userId", (req, res) => {
+  const { userId } = req.params;
+  const sql = `SELECT UserId, FullName, Email, Role, WalletAddress, AvatarURL 
+               FROM Users 
+               WHERE UserId = ?`;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching user:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ success: true, user: results[0] });
+  });
+});
+
+app.put("/api/user/:userId", (req, res) => {
+  const { userId } = req.params;
+  const { fullName, role, email, walletAddress } = req.body;
+
+  const sql = `UPDATE Users 
+               SET FullName = ?, Role = ?, Email = ?, WalletAddress = ?
+               WHERE UserId = ?`;
+
+  db.query(sql, [fullName, role, email, walletAddress, userId], (err, results) => {
+    if (err) {
+      console.error("Error updating user:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    db.query(`SELECT UserId, FullName, Email, Role, WalletAddress, AvatarURL FROM Users WHERE UserId = ?`, [userId], (err2, userResults) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true, user: userResults[0] });
+    });
   });
 });
 
