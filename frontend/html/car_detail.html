@@ -6,6 +6,13 @@
   <title>Car Detail | Morent</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/car_detail.css" />
+  <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css">
+  <style>
+    * {margin:0;padding:0;box-sizing:border-box;}
+    body {font-family:'Inter',sans-serif;background:#f9f9f9;color:#333;}
+    .loading {text-align:center;padding:60px;font-size:18px;color:#666;}
+    .error {color:#e00;text-align:center;padding:40px;}
+  </style>
 </head>
 
 <body>
@@ -25,46 +32,47 @@
 
   <main>
     <div class="left">
-      <div class="banner">
-        <div>
-          <h2>Sports car with the best design and acceleration</h2>
-          <p>Safety and comfort while driving a futuristic and elegant sports car</p>
-        </div>
-        <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
-      </div>
+      <div id="loading" class="loading">Loading car details...</div>
+      <div id="error" class="error" style="display:none;"></div>
 
-      <div class="car-gallery">
-        <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg">
-        <img src="https://cdn.motor1.com/images/mgl/1xEJJ/s3/nissan-gt-r-interior.jpg">
-        <img src="https://cdn.motor1.com/images/mgl/2xEJJ/s3/nissan-gt-r-dashboard.jpg">
-      </div>
-
-      <div class="car-info">
-        <h2>Nissan GT – R</h2>
-        <p>NISMO has become the embodiment of Nissan’s outstanding performance, inspired by the most unforgiving proving ground, the “race track”.</p>
-        <div class="car-specs">
-          <span><b>Type Car:</b> Sport</span>
-          <span><b>Capacity:</b> 2 Person</span>
-          <span><b>Steering:</b> Manual</span>
-          <span><b>Gasoline:</b> 70L</span>
-        </div>
-        <h3>$80.00 / day</h3>
-      </div>
-
-      <div class="reviews">
-        <h3>Reviews (13)</h3>
-        <div class="review-item">
-          <img src="https://i.pravatar.cc/50?img=12" alt="Alex Stanton">
+      <div id="carDetailContent" style="display:none;">
+        <div class="banner">
           <div>
-            <h4>Alex Stanton <span style="color:#6b7280;font-size:13px;">· CEO at Bukalapak</span></h4>
-            <p>We are very happy with the service from the MORENT App. Morent has low price and also a large variety of cars with good and comfortable facilities.</p>
+            <h2 id="bannerTitle"></h2>
+            <p id="bannerDesc"></p>
           </div>
+          <img id="mainImage" alt="Car" style="max-width:100%;border-radius:12px;" />
         </div>
-        <div class="review-item">
-          <img src="https://i.pravatar.cc/50?img=15" alt="Skylar Dias">
-          <div>
-            <h4>Skylar Dias <span style="color:#6b7280;font-size:13px;">· CEO at Amazon</span></h4>
-            <p>We are greatly helped by the services of the MORENT Application. The officers are very friendly and polite. Thank you Morent!</p>
+
+        <div class="car-gallery" id="carGallery"></div>
+
+        <div class="car-info">
+          <h2 id="carName"></h2>
+          <p id="carDescription"></p>
+          <div class="car-specs">
+            <span><b>Type Car:</b> <span id="carType">-</span></span>
+            <span><b>Capacity:</b> <span id="carCapacity">-</span></span>
+            <span><b>Steering:</b> <span id="carSteering">-</span></span>
+            <span><b>Gasoline:</b> <span id="carGasoline">-</span></span>
+          </div>
+          <h3 id="carPrice">$0.00 / day</h3>
+        </div>
+
+        <div class="reviews">
+          <h3>Reviews (2)</h3>
+          <div class="review-item">
+            <img src="https://i.pravatar.cc/50?img=12" alt="Alex Stanton">
+            <div>
+              <h4>Alex Stanton <span style="color:#6b7280;font-size:13px;">CEO at Bukalapak</span></h4>
+              <p>We are very happy with the service from the MORENT App. Morent has low price and also a large variety of cars with good and comfortable facilities.</p>
+            </div>
+          </div>
+          <div class="review-item">
+            <img src="https://i.pravatar.cc/50?img=15" alt="Skylar Dias">
+            <div>
+              <h4>Skylar Dias <span style="color:#6b7280;font-size:13px;">CEO at Amazon</span></h4>
+              <p>We are greatly helped by the services of the MORENT Application. The officers are very friendly and polite. Thank you Morent!</p>
+            </div>
           </div>
         </div>
       </div>
@@ -74,8 +82,7 @@
       <div class="rent-box">
         <h3>Rent This Car</h3>
         <p>Starting from</p>
-        <h2>$80.00 / day</h2>
-        <!-- Nút bấm chuyển hướng -->
+        <h2 id="rentPriceDisplay">$0.00 / day</h2>
         <button id="rentNowBtn">Rent Now</button>
       </div>
     </div>
@@ -88,43 +95,101 @@
         <p class="desc">Our vision is to provide convenience and help increase your sales business.</p>
       </div>
       <div class="links">
-        <div>
-          <h4>About</h4>
-          <a href="#">How it works</a>
-          <a href="#">Featured</a>
-          <a href="#">Partnership</a>
-          <a href="#">Business Relation</a>
-        </div>
-        <div>
-          <h4>Community</h4>
-          <a href="#">Events</a>
-          <a href="#">Blog</a>
-          <a href="#">Podcast</a>
-          <a href="#">Invite a friend</a>
-        </div>
-        <div>
-          <h4>Socials</h4>
-          <a href="#">Discord</a>
-          <a href="#">Instagram</a>
-          <a href="#">Twitter</a>
-          <a href="#">Facebook</a>
-        </div>
+        <div><h4>About</h4><a href="#">How it works</a><a href="#">Featured</a><a href="#">Partnership</a><a href="#">Business Relation</a></div>
+        <div><h4>Community</h4><a href="#">Events</a><a href="#">Blog</a><a href="#">Podcast</a><a href="#">Invite a friend</a></div>
+        <div><h4>Socials</h4><a href="#">Discord</a><a href="#">Instagram</a><a href="#">Twitter</a><a href="#">Facebook</a></div>
       </div>
     </div>
     <div class="bottom">
       <span>©2022 MORENT. All rights reserved</span>
-      <div>
-        <a href="#">Privacy & Policy</a> |
-        <a href="#">Terms & Condition</a>
-      </div>
+      <div><a href="#">Privacy & Policy</a> | <a href="#">Terms & Condition</a></div>
     </div>
   </footer>
 
+  <!-- ============= SCRIPT ĐÃ SỬA ============= -->
   <script>
-    // Khi bấm "Rent Now", chuyển sang trang rental_form.html
-    document.getElementById("rentNowBtn").addEventListener("click", function() {
-      window.location.href = "rental_form.html";
-    });
+    // BỌC TOÀN BỘ LOGIC TRONG HÀM IIFE → KHÔNG CÒN "Illegal return"
+    (function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const carId = urlParams.get('carId');
+
+      const loadingEl = document.getElementById('loading');
+      const errorEl   = document.getElementById('error');
+      const contentEl = document.getElementById('carDetailContent');
+
+      // Kiểm tra carId
+      if (!carId) {
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Car ID not provided in URL!';
+        errorEl.style.display = 'block';
+        console.error('No carId in URL');
+        return; // OK: return trong hàm
+      }
+
+      console.log('Fetching car ID:', carId);
+
+      // Gọi API
+      fetch(`http://localhost:3000/api/admin/cars/${carId}`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          if (!data.success || !data.car) {
+            throw new Error(data.error || 'Invalid response');
+          }
+
+          const car = data.car;
+          console.log('Car loaded:', car);
+
+          // Ẩn loading
+          loadingEl.style.display = 'none';
+          contentEl.style.display = 'block';
+
+          // Cập nhật UI
+          document.getElementById('bannerTitle').textContent = `${car.CarName} - Premium Performance`;
+          document.getElementById('bannerDesc').textContent   = car.Description || 'Experience luxury, speed and comfort.';
+          document.getElementById('mainImage').src           = car.ImageURL || 'https://via.placeholder.com/600x300';
+          document.getElementById('mainImage').alt           = car.CarName;
+
+          document.getElementById('carName').textContent         = `${car.CarName} (${car.Brand})`;
+          document.getElementById('carDescription').textContent  = car.Description || 'High-performance vehicle.';
+
+          document.getElementById('carType').textContent      = car.Brand.toLowerCase().includes('suv') ? 'SUV' : 'Sport';
+          document.getElementById('carCapacity').textContent  = '4 Person';
+          document.getElementById('carSteering').textContent  = 'Manual';
+          document.getElementById('carGasoline').textContent  = '70L';
+
+          const price = parseFloat(car.PriceRent || 0).toFixed(2);
+          document.getElementById('carPrice').textContent        = `$${price} / day`;
+          document.getElementById('rentPriceDisplay').textContent = `$${price} / day`;
+
+          // Gallery
+          const gallery = document.getElementById('carGallery');
+          gallery.innerHTML = '';
+          [car.ImageURL, car.ImageURL, car.ImageURL].forEach((src, i) => {
+            const img = document.createElement('img');
+            img.src = src || 'https://via.placeholder.com/200';
+            img.alt = `${car.CarName} view ${i+1}`;
+            img.style.width = '100%';
+            img.style.borderRadius = '8px';
+            img.style.marginBottom = '10px';
+            img.onerror = () => img.src = 'https://via.placeholder.com/200?text=No+Image';
+            gallery.appendChild(img);
+          });
+
+          // Nút Rent Now
+          document.getElementById('rentNowBtn').onclick = () => {
+            window.location.href = `rental_form.html?carId=${car.CarId}`;
+          };
+        })
+        .catch(err => {
+          loadingEl.style.display = 'none';
+          errorEl.textContent = `Error: ${err.message}`;
+          errorEl.style.display = 'block';
+          console.error('Fetch error:', err);
+        });
+    })();
   </script>
 </body>
 </html>

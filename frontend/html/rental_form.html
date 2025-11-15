@@ -6,6 +6,20 @@
   <title>Rental / Purchase Form | Morent</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/rental_form.css" />
+  <style>
+    .disabled-input {
+      background-color: #f3f4f6 !important;
+      color: #9ca3af !important;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
 </head>
 
 <body>
@@ -25,11 +39,16 @@
 
   <main>
     <h1>Rental / Purchase Form</h1>
-    <form>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">Loading car information...</div>
+
+    <!-- Form -->
+    <form id="rentalForm" style="display: none;">
       <div class="form-row">
         <div>
           <label for="car-name">Car Name</label>
-          <input type="text" id="car-name" placeholder="e.g. Nissan GT-R" required>
+          <input type="text" id="car-name" readonly>
         </div>
         <div>
           <label for="contract-type">Contract Type</label>
@@ -66,7 +85,7 @@
       <div class="form-row">
         <div>
           <label for="deposit">Deposit ($)</label>
-          <input type="number" id="deposit" placeholder="Enter deposit amount" required>
+          <input towards="number" id="deposit" readonly>
         </div>
         <div>
           <label for="payment">Payment Method</label>
@@ -95,36 +114,123 @@
         <p class="desc">Our vision is to provide convenience and help increase your sales business.</p>
       </div>
       <div class="links">
-        <div>
-          <h4>About</h4>
-          <a href="#">How it works</a>
-          <a href="#">Featured</a>
-          <a href="#">Partnership</a>
-          <a href="#">Business Relation</a>
-        </div>
-        <div>
-          <h4>Community</h4>
-          <a href="#">Events</a>
-          <a href="#">Blog</a>
-          <a href="#">Podcast</a>
-          <a href="#">Invite a friend</a>
-        </div>
-        <div>
-          <h4>Socials</h4>
-          <a href="#">Discord</a>
-          <a href="#">Instagram</a>
-          <a href="#">Twitter</a>
-          <a href="#">Facebook</a>
-        </div>
+        <div><h4>About</h4><a href="#">How it works</a><a href="#">Featured</a><a href="#">Partnership</a><a href="#">Business Relation</a></div>
+        <div><h4>Community</h4><a href="#">Events</a><a href="#">Blog</a><a href="#">Podcast</a><a href="#">Invite a friend</a></div>
+        <div><h4>Socials</h4><a href="#">Discord</a><a href="#">Instagram</a><a href="#">Twitter</a><a href="#">Facebook</a></div>
       </div>
     </div>
     <div class="bottom">
       <span>©2022 MORENT. All rights reserved</span>
-      <div>
-        <a href="#">Privacy & Policy</a> |
-        <a href="#">Terms & Condition</a>
-      </div>
+      <div><a href="#">Privacy & Policy</a> | <a href="#">Terms & Condition</a></div>
     </div>
   </footer>
+
+  <!-- ============= SCRIPT – ĐÃ SỬA LỖI ============= -->
+  <script>
+    // BỌC TOÀN BỘ TRONG IIFE → return HỢP LỆ
+    (function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const carId = urlParams.get('carId');
+
+      const loadingEl = document.getElementById('loading');
+      const formEl = document.getElementById('rentalForm');
+
+      if (!carId) {
+        loadingEl.textContent = 'Error: No car selected!';
+        loadingEl.style.color = 'red';
+        console.error('No carId in URL');
+        return; // OK: return trong hàm
+      }
+
+      console.log('Fetching car:', carId);
+
+      fetch(`http://localhost:3000/api/admin/cars/${carId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Car not found');
+          return res.json();
+        })
+        .then(data => {
+          if (!data.success || !data.car) {
+            throw new Error(data.error || 'Invalid response');
+          }
+
+          const car = data.car;
+          console.log('Car loaded:', car);
+
+          // Ẩn loading
+          loadingEl.style.display = 'none';
+          formEl.style.display = 'block';
+
+          // Điền dữ liệu
+          document.getElementById('car-name').value = `${car.CarName} (${car.Brand})`;
+
+          // Deposit: PriceBuy hoặc 10% PriceRent
+          const deposit = car.PriceBuy 
+            ? parseFloat(car.PriceBuy) 
+            : parseFloat(car.PriceRent || 0) * 0.1;
+          document.getElementById('deposit').value = deposit.toFixed(2);
+
+          // Start Date = hôm nay
+          const today = new Date().toISOString().split('T')[0];
+          const startDateEl = document.getElementById('start-date');
+          startDateEl.value = today;
+          startDateEl.min = today;
+
+          // Start Time = hiện tại
+          const now = new Date();
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          document.getElementById('start-time').value = `${hours}:${minutes}`;
+
+          // Xử lý Contract Type
+          const contractType = document.getElementById('contract-type');
+          const endDate = document.getElementById('end-date');
+          const endTime = document.getElementById('end-time');
+
+          const toggleEndFields = () => {
+            if (contractType.value === 'purchase') {
+              endDate.disabled = true;
+              endTime.disabled = true;
+              endDate.classList.add('disabled-input');
+              endTime.classList.add('disabled-input');
+              endDate.removeAttribute('required');
+              endTime.removeAttribute('required');
+            } else {
+              endDate.disabled = false;
+              endTime.disabled = false;
+              endDate.classList.remove('disabled-input');
+              endTime.classList.remove('disabled-input');
+              endDate.setAttribute('required', '');
+              endTime.setAttribute('required', '');
+            }
+          };
+
+          contractType.addEventListener('change', toggleEndFields);
+          toggleEndFields(); // Gọi lần đầu
+
+          // Submit
+          formEl.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(formEl);
+            const data = Object.fromEntries(formData);
+            data.carId = carId;
+
+            if (data.contractType === 'purchase') {
+              data.endDate = null;
+              data.endTime = null;
+            }
+
+            console.log('Contract Data:', data);
+            alert('Hợp đồng đã được tạo! (Xem console)');
+            // Gửi về backend sau: fetch('/api/contracts', { method: 'POST', ... })
+          });
+        })
+        .catch(err => {
+          loadingEl.textContent = `Error: ${err.message}`;
+          loadingEl.style.color = 'red';
+          console.error('Fetch error:', err);
+        });
+    })();
+  </script>
 </body>
 </html>
