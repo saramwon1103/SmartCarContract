@@ -169,14 +169,6 @@ body {
     z-index: 1;
 }
 
-.left-car {
-    background-image: url('../image/hero-car1.png');
-}
-
-.right-car {
-    background-image: url('../image/hero-car2.png');
-}
-
 /* Section Headers */
 .section-header {
     display: flex;
