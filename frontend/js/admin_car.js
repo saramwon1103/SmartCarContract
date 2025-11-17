@@ -35,8 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatPrice(price) {
-    if (!price) return '$0.00';
-    return '$' + parseFloat(price).toFixed(2);
+    if (!price && price !== 0) return '0.00 CPT';
+    const numericPrice = parseFloat(price);
+    if (Number.isNaN(numericPrice)) return '0.00 CPT';
+    return numericPrice.toFixed(2) + ' CPT';
   }
 
   function formatDate(dateString) {
