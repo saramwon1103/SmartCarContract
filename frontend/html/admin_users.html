@@ -55,11 +55,72 @@
             </div>
           </div>
 
-          <!-- RIGHT PANEL: keep empty or add summary cards later -->
+          <!-- RIGHT PANEL: Summary Statistics -->
           <div class="right-panel">
             <div class="card">
-              <h3>Summary</h3>
-              <p style="color:var(--gray-600);font-size:14px;">Quick stats or controls can go here.</p>
+              <h3>Users Summary</h3>
+              <div class="summary-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;">
+                <div class="summary-item" style="background:var(--gray-50,#f8f9fa);padding:16px;border-radius:12px;text-align:center;">
+                  <span class="summary-label" style="display:block;color:var(--gray-600,#6c757d);font-size:13px;margin-bottom:4px;">Total Users</span>
+                  <strong class="summary-value" style="font-size:24px;color:var(--primary-600,#2563eb);" id="totalUsersCount">0</strong>
+                </div>
+                <div class="summary-item" style="background:var(--green-50,#f0fff4);padding:16px;border-radius:12px;text-align:center;">
+                  <span class="summary-label" style="display:block;color:var(--green-600,#059669);font-size:13px;margin-bottom:4px;">Owners</span>
+                  <strong class="summary-value" style="font-size:24px;color:var(--green-600,#059669);" id="ownersCount">0</strong>
+                </div>
+                <div class="summary-item" style="background:var(--purple-50,#faf5ff);padding:16px;border-radius:12px;text-align:center;">
+                  <span class="summary-label" style="display:block;color:var(--purple-600,#9333ea);font-size:13px;margin-bottom:4px;">Admins</span>
+                  <strong class="summary-value" style="font-size:24px;color:var(--purple-600,#9333ea);" id="adminsCount">0</strong>
+                </div>
+                <div class="summary-item" style="background:var(--orange-50,#fff7ed);padding:16px;border-radius:12px;text-align:center;">
+                  <span class="summary-label" style="display:block;color:var(--orange-600,#ea580c);font-size:13px;margin-bottom:4px;">With Wallet</span>
+                  <strong class="summary-value" style="font-size:24px;color:var(--orange-600,#ea580c);" id="withWalletCount">0</strong>
+                </div>
+              </div>
+
+              <!-- Role Distribution Chart (Visual representation) -->
+              <div style="margin-top:24px;">
+                <h4 style="font-size:16px;margin-bottom:12px;color:var(--gray-900,#111827);">Role Distribution</h4>
+                <div class="role-bars">
+                  <div class="role-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <div style="width:60px;font-size:13px;color:var(--gray-600,#6c757d);">Owner</div>
+                    <div style="flex:1;background:var(--gray-200,#e5e7eb);height:8px;border-radius:4px;overflow:hidden;">
+                      <div id="ownerBar" style="height:100%;background:var(--green-500,#10b981);width:0%;transition:width 0.3s ease;"></div>
+                    </div>
+                    <span id="ownerPercent" style="font-size:13px;color:var(--gray-600,#6c757d);width:35px;text-align:right;">0%</span>
+                  </div>
+                  <div class="role-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <div style="width:60px;font-size:13px;color:var(--gray-600,#6c757d);">Admin</div>
+                    <div style="flex:1;background:var(--gray-200,#e5e7eb);height:8px;border-radius:4px;overflow:hidden;">
+                      <div id="adminBar" style="height:100%;background:var(--purple-500,#8b5cf6);width:0%;transition:width 0.3s ease;"></div>
+                    </div>
+                    <span id="adminPercent" style="font-size:13px;color:var(--gray-600,#6c757d);width:35px;text-align:right;">0%</span>
+                  </div>
+                  <div class="role-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <div style="width:60px;font-size:13px;color:var(--gray-600,#6c757d);">User</div>
+                    <div style="flex:1;background:var(--gray-200,#e5e7eb);height:8px;border-radius:4px;overflow:hidden;">
+                      <div id="userBar" style="height:100%;background:var(--blue-500,#3b82f6);width:0%;transition:width 0.3s ease;"></div>
+                    </div>
+                    <span id="userPercent" style="font-size:13px;color:var(--gray-600,#6c757d);width:35px;text-align:right;">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--gray-200,#e5e7eb);">
+                <h4 style="font-size:16px;margin-bottom:12px;color:var(--gray-900,#111827);">Quick Actions</h4>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <button class="btn btn-sm" style="justify-content:flex-start;" onclick="filterByRole('owner')">
+                    <span>🚗</span> View All Owners
+                  </button>
+                  <button class="btn btn-sm" style="justify-content:flex-start;" onclick="filterByRole('admin')">
+                    <span>⚙️</span> View All Admins
+                  </button>
+                  <button class="btn btn-sm" style="justify-content:flex-start;" onclick="exportUsers()">
+                    <span>📊</span> Export User Data
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>

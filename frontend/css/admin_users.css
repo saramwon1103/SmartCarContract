@@ -260,3 +260,72 @@ table#usersTable tbody tr:hover { background: var(--blue-100); cursor: pointer; 
   .search { width: 100%; }
   .modal-card { width: 96%; }
 }
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.role-badge.admin {
+  background: var(--purple-100, #f3e8ff);
+  color: var(--purple-700, #7c3aed);
+}
+
+.role-badge.owner {
+  background: var(--green-100, #dcfce7);
+  color: var(--green-700, #15803d);
+}
+
+.role-badge.user {
+  background: var(--blue-100, #dbeafe);
+  color: var(--blue-700, #1d4ed8);
+}
+
+/* Summary Cards Enhancement */
+.summary-grid .summary-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-grid .summary-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit {
+  background: var(--blue-50, #eff6ff);
+  color: var(--blue-700, #1d4ed8);
+  border: 1px solid var(--blue-200, #bfdbfe);
+}
+
+.btn-edit:hover {
+  background: var(--blue-100, #dbeafe);
+}
+
+.btn-delete {
+  background: var(--red-50, #fef2f2);
+  color: var(--red-700, #b91c1c);
+  border: 1px solid var(--red-200, #fecaca);
+}
+
+.btn-delete:hover {
+  background: var(--red-100, #fee2e2);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
