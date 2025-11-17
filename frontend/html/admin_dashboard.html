@@ -41,108 +41,229 @@
       </header>
 
       <section class="content">
-        <!-- LEFT PANEL -->
-        <div class="left-panel">
-          <div class="card rental-details">
-            <h3>Details Rental</h3>
-            <div class="map"></div>
-            <div class="car-box">
-              <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg" alt="Nissan GT-R">
-              <div>
-                <h4>Nissan GT – R</h4>
-                <p>Sport Car</p>
-              </div>
-              <span>#9761</span>
+        <!-- DASHBOARD STATS -->
+        <div class="stats-section">
+          <div class="stat-card">
+            <div class="stat-icon cars">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 17h2c0 1.1.9 2 2 2s2-.9 2-2h6c0 1.1.9 2 2 2s2-.9 2-2h2v-5l-2.5-7H3v7h2z"/>
+                <circle cx="9" cy="17" r="2"/>
+                <circle cx="19" cy="17" r="2"/>
+                <path d="M3 12h18"/>
+              </svg>
             </div>
-            <div class="pickup-drop">
-              <div>
-                <h5>Pick - Up</h5>
-                <p>Location: Kota Semarang</p>
-                <p>Date: 20 July 2022</p>
-                <p>Time: 07:00</p>
-              </div>
-              <div>
-                <h5>Drop - Off</h5>
-                <p>Location: Kota Semarang</p>
-                <p>Date: 21 July 2022</p>
-                <p>Time: 01:00</p>
-              </div>
+            <div class="stat-content">
+              <h3 id="totalCars">20</h3>
+              <p>Total Cars</p>
+              <span class="trend positive">+12% from last month</span>
             </div>
-            <div class="total-price">
-              <p>Total Rental Price</p>
-              <h3>$80.00</h3>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon users">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <h3 id="totalUsers">40</h3>
+              <p>Active Users</p>
+              <span class="trend positive">+8% from last month</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon contracts">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10,9 9,9 8,9"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <h3 id="activeContracts">8</h3>
+              <p>Active Contracts</p>
+              <span class="trend positive">+5% from last week</span>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon revenue">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <h3 id="totalRevenue">4,520</h3>
+              <p>Total Revenue (CPT)</p>
+              <span class="trend positive">+15% from last month</span>
             </div>
           </div>
         </div>
 
-        <!-- RIGHT PANEL -->
-        <div class="right-panel">
-          <!-- TOP 5 CAR RENTAL -->
-          <div class="card chart">
-            <h3>Top 5 Car Rental</h3>
-            <canvas id="carChart"></canvas>
-            <ul>
-              <li><span class="dot blue"></span> Sport Car <b>17,439</b></li>
-              <li><span class="dot navy"></span> SUV <b>9,478</b></li>
-              <li><span class="dot sky"></span> Coupe <b>18,197</b></li>
-              <li><span class="dot light"></span> Hatchback <b>12,510</b></li>
-              <li><span class="dot gray"></span> MPV <b>14,406</b></li>
-            </ul>
+        <!-- MAIN CONTENT GRID -->
+        <div class="main-content-grid">
+          <!-- LEFT PANEL -->
+          <div class="left-panel">
+            <div class="card rental-details">
+              <h3>🚗 Active Rental Details</h3>
+              <div class="map">
+                <div class="map-placeholder">
+                  <svg width="100%" height="200" viewBox="0 0 400 200" fill="none">
+                    <rect width="400" height="200" fill="#f8f9fa" rx="8"/>
+                    <circle cx="120" cy="80" r="8" fill="#3563E9"/>
+                    <circle cx="280" cy="120" r="8" fill="#e74c3c"/>
+                    <path d="M120 80 Q200 60 280 120" stroke="#3563E9" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+                    <text x="200" y="30" text-anchor="middle" fill="#64748b" font-size="14" font-family="Inter">Route Map</text>
+                    <text x="120" y="100" text-anchor="middle" fill="#3563E9" font-size="12" font-family="Inter">Pickup</text>
+                    <text x="280" y="140" text-anchor="middle" fill="#e74c3c" font-size="12" font-family="Inter">Dropoff</text>
+                  </svg>
+                </div>
+              </div>
+              <div class="car-box">
+                <img src="https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreihehfcugfr2vcyrwie3n3m5euwj7mb72fj5o7v66kakaobvw6w3x4" alt="Honda City">
+                <div>
+                  <h4>Honda City</h4>
+                  <p>Honda • 2021</p>
+                </div>
+                <span class="contract-id">#CT11</span>
+              </div>
+              <div class="pickup-drop">
+                <div class="location-item pickup">
+                  <div class="location-icon">📍</div>
+                  <div>
+                    <h5>Pick - Up</h5>
+                    <p><strong>Location:</strong> Ho Chi Minh City</p>
+                    <p><strong>Date:</strong> 17 November 2025</p>
+                    <p><strong>Time:</strong> 09:00</p>
+                  </div>
+                </div>
+                <div class="location-item dropoff">
+                  <div class="location-icon">🎯</div>
+                  <div>
+                    <h5>Drop - Off</h5>
+                    <p><strong>Location:</strong> Ho Chi Minh City</p>
+                    <p><strong>Date:</strong> 20 November 2025</p>
+                    <p><strong>Time:</strong> 18:00</p>
+                  </div>
+                </div>
+              </div>
+              <div class="total-price">
+                <div class="price-breakdown">
+                  <div class="price-item">
+                    <span>Daily Rate:</span>
+                    <span>22.00 CPT</span>
+                  </div>
+                  <div class="price-item">
+                    <span>Duration:</span>
+                    <span>4 days</span>
+                  </div>
+                  <div class="price-divider"></div>
+                  <div class="price-total">
+                    <span>Total Rental Price</span>
+                    <h3>88.00 CPT</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- TRANSACTIONS -->
-          <div class="card transactions">
-            <div class="header">
-              <h3>Recent Transaction</h3>
-              <a href="#">View All</a>
+          <!-- RIGHT PANEL -->
+          <div class="right-panel">
+            <!-- TOP CAR BRANDS -->
+            <div class="card chart">
+              <h3>📊 Top Car Brands</h3>
+              <div class="chart-container">
+                <canvas id="carChart"></canvas>
+                <div class="chart-center-info">
+                  <div class="center-number">20</div>
+                  <div class="center-label">Total Cars</div>
+                </div>
+              </div>
+              <ul class="chart-legend">
+                <li><span class="dot" style="background-color: #3563E9"></span> Toyota <b>8</b></li>
+                <li><span class="dot" style="background-color: #264BC8"></span> Honda <b>3</b></li>
+                <li><span class="dot" style="background-color: #85A8F8"></span> Hyundai <b>3</b></li>
+                <li><span class="dot" style="background-color: #AEC8FC"></span> Mazda <b>2</b></li>
+                <li><span class="dot" style="background-color: #D6E4FD"></span> Kia <b>2</b></li>
+              </ul>
             </div>
-            <ul>
-              <li>
-                <img src="https://cdn.motor1.com/images/mgl/8xEJJ/s3/nissan-gt-r.jpg">
-                <div><h4>Nissan GT – R</h4><p>Sport Car</p></div>
-                <span>20 July</span><b>$80.00</b>
-              </li>
-              <li>
-                <img src="https://cdn.motor1.com/images/mgl/8jjq1/s3/koenigsegg.jpg">
-                <div><h4>Koenigsegg</h4><p>Sport Car</p></div>
-                <span>19 July</span><b>$99.00</b>
-              </li>
-              <li>
-                <img src="https://cdn.motor1.com/images/mgl/0ANRm/s3/rolls-royce-dawn.jpg">
-                <div><h4>Rolls – Royce</h4><p>Sport Car</p></div>
-                <span>18 July</span><b>$96.00</b>
-              </li>
-              <li>
-                <img src="https://cdn.motor1.com/images/mgl/nGvvk/s3/honda-cr-v.jpg">
-                <div><h4>CR – V</h4><p>SUV</p></div>
-                <span>17 July</span><b>$80.00</b>
-              </li>
-            </ul>
+
+            <!-- TRANSACTIONS -->
+            <div class="card transactions">
+              <div class="header">
+                <h3>💳 Recent Transactions</h3>
+                <a href="#" class="view-all-btn">View All →</a>
+              </div>
+              <ul class="transaction-list">
+                <li class="transaction-item">
+                  <div class="transaction-avatar">
+                    <img src="https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreihehfcugfr2vcyrwie3n3m5euwj7mb72fj5o7v66kakaobvw6w3x4" alt="Honda City">
+                  </div>
+                  <div class="transaction-info">
+                    <h4>Honda City</h4>
+                    <p>Honda • Contract #CT11</p>
+                  </div>
+                  <div class="transaction-meta">
+                    <span class="transaction-date">17 Nov</span>
+                    <div class="transaction-amount">88.00 CPT</div>
+                  </div>
+                </li>
+                <li class="transaction-item">
+                  <div class="transaction-avatar">
+                    <img src="https://maroon-able-ape-379.mypinata.cloud/ipfs/bafybeihvhdvpegoudhmaggfl6jm7zej26qvr7gwv7yszuvpuw7wc6w5u54" alt="Kia Morning">
+                  </div>
+                  <div class="transaction-info">
+                    <h4>Kia Morning</h4>
+                    <p>Kia • Contract #CT12</p>
+                  </div>
+                  <div class="transaction-meta">
+                    <span class="transaction-date">16 Nov</span>
+                    <div class="transaction-amount">70.00 CPT</div>
+                  </div>
+                </li>
+                <li class="transaction-item">
+                  <div class="transaction-avatar">
+                    <img src="https://maroon-able-ape-379.mypinata.cloud/ipfs/bafybeidfbotk5wmspbxvmtgiw2jydexrq5ccxybewsghwbobaqcspyk62a" alt="Honda CR-V">
+                  </div>
+                  <div class="transaction-info">
+                    <h4>Honda CR-V</h4>
+                    <p>Honda • Contract #CT13</p>
+                  </div>
+                  <div class="transaction-meta">
+                    <span class="transaction-date">15 Nov</span>
+                    <div class="transaction-amount">420.00 CPT</div>
+                  </div>
+                </li>
+                <li class="transaction-item">
+                  <div class="transaction-avatar">
+                    <img src="https://maroon-able-ape-379.mypinata.cloud/ipfs/bafybeifhvobh4klbgvhbfstdnrvvjt4as2i5gwk3fhhlynjgfjhmgkshbu" alt="Tesla Model 3">
+                  </div>
+                  <div class="transaction-info">
+                    <h4>Tesla Model 3</h4>
+                    <p>Tesla • Contract #CT09</p>
+                  </div>
+                  <div class="transaction-meta">
+                    <span class="transaction-date">14 Nov</span>
+                    <div class="transaction-amount high-amount">320.00 CPT</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- CHART SCRIPT -->
-  <script>
-    const ctx = document.getElementById('carChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Sport Car', 'SUV', 'Coupe', 'Hatchback', 'MPV'],
-        datasets: [{
-          data: [17439, 9478, 18197, 12510, 14406],
-          backgroundColor: ['#3563E9', '#264BC8', '#85A8F8', '#AEC8FC', '#D6E4FD'],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        cutout: '65%',
-        plugins: { legend: { display: false } }
-      }
-    });
-  </script>
+  <!-- Include Admin Dashboard Script -->
+  <script src="../js/admin_dashboard.js"></script>
   <script src="../js/admin_sidebar.js"></script>
 </body>
 </html>

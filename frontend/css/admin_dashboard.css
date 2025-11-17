@@ -350,4 +350,1247 @@
     font-size: 13px;
     margin-right: 8px;
   }
+
+  /* Chart enhancements */
+  .chart canvas {
+    width: 220px !important;
+    height: 220px !important;
+    margin: 0 auto;
+    display: block;
+    transition: all 0.3s ease;
+  }
+
+  .chart ul li {
+    transition: background-color 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  .chart ul li:hover {
+    background-color: var(--gray-100);
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Transaction list enhancements */
+  .transactions li {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 12px 8px;
+  }
+
+  .transactions li:hover {
+    background-color: var(--gray-100);
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(53, 99, 233, 0.1);
+  }
+
+  .transactions li img {
+    border-radius: 6px;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+
+  .transactions li:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Rental details enhancements */
+  .car-box {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .car-box:hover {
+    background-color: var(--gray-100);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .car-box img {
+    border-radius: 6px;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+
+  .car-box:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Loading states */
+  .loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--blue-200);
+    border-top: 2px solid var(--blue-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Error states */
+  .error-message {
+    color: #e74c3c;
+    background-color: #fdf2f2;
+    border: 1px solid #fecaca;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .error-message::before {
+    content: '⚠️';
+    font-size: 16px;
+  }
+
+  /* ===============================
+     DASHBOARD STATS SECTION
+  =================================*/
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--gray-300);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(53, 99, 233, 0.15);
+    border-color: var(--blue-200);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--blue-500), var(--blue-300));
+  }
+
+  .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .stat-icon.cars {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .stat-icon.users {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  .stat-icon.contracts {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  .stat-icon.revenue {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  }
+
+  .stat-content h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--blue-900);
+    margin: 0 0 4px 0;
+    line-height: 1;
+  }
+
+  .stat-content p {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin: 0 0 8px 0;
+    font-weight: 500;
+  }
+
+  .trend {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  .trend.positive {
+    color: #16a085;
+    background-color: #d5f4e6;
+  }
+
+  .trend.negative {
+    color: #e74c3c;
+    background-color: #fdf2f2;
+  }
+
+  /* ===============================
+     ENHANCED CONTENT LAYOUT
+  =================================*/
+  .content {
+    padding: 24px;
+    background: var(--gray-100);
+    min-height: calc(100vh - 80px);
+  }
+
+  .main-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  /* Enhanced card styling */
+  .card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--gray-300);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card h3::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: var(--blue-500);
+    border-radius: 2px;
+  }
+
+  /* ===============================
+     ENHANCED RENTAL DETAILS
+  =================================*/
+  .map-placeholder {
+    background: var(--gray-100);
+    border-radius: 12px;
+    border: 2px dashed var(--gray-300);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .car-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+  }
+
+  .car-box:hover {
+    background: var(--blue-100);
+    transform: translateY(-2px);
+  }
+
+  .car-box img {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--white);
+  }
+
+  .car-box h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 4px 0;
+  }
+
+  .car-box p {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .contract-id {
+    background: var(--blue-500);
+    color: var(--white);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: auto;
+  }
+
+  .pickup-drop {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .location-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .location-icon {
+    font-size: 20px;
+    margin-top: 4px;
+  }
+
+  .location-item h5 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 8px 0;
+  }
+
+  .location-item p {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin: 2px 0;
+  }
+
+  .location-item strong {
+    color: var(--blue-700);
+  }
+
+  .price-breakdown {
+    background: var(--gray-100);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .price-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--gray-600);
+  }
+
+  .price-divider {
+    height: 1px;
+    background: var(--gray-300);
+    margin: 16px 0;
+  }
+
+  .price-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 0 0;
+  }
+
+  .price-total span {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--blue-900);
+  }
+
+  .price-total h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--blue-500);
+    margin: 0;
+  }
+
+  /* ===============================
+     ENHANCED CHART SECTION
+  =================================*/
+  .chart-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .chart-center-info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .center-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--blue-900);
+    line-height: 1;
+  }
+
+  .center-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  .chart-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .chart-legend li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    font-size: 14px;
+  }
+
+  .chart-legend li:hover {
+    background: var(--gray-100);
+  }
+
+  .chart-legend .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .chart-legend b {
+    color: var(--blue-700);
+    font-weight: 600;
+  }
+
+  /* ===============================
+     ENHANCED TRANSACTIONS
+  =================================*/
+  .transactions .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .view-all-btn {
+    color: var(--blue-500);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .view-all-btn:hover {
+    color: var(--blue-700);
+    transform: translateX(2px);
+  }
+
+  .transaction-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .transaction-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 12px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .transaction-item:last-child {
+    border-bottom: none;
+  }
+
+  .transaction-item:hover {
+    background: var(--gray-100);
+    transform: translateX(4px);
+  }
+
+  .transaction-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid var(--white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .transaction-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .transaction-info {
+    flex: 1;
+  }
+
+  .transaction-info h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 4px 0;
+  }
+
+  .transaction-info p {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .transaction-meta {
+    text-align: right;
+  }
+
+  .transaction-date {
+    font-size: 12px;
+    color: var(--gray-600);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .transaction-amount {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blue-700);
+    background: var(--blue-100);
+    padding: 6px 12px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+
+  .transaction-amount.high-amount {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+  }
+
+  /* ===============================
+     RESPONSIVE DESIGN
+  =================================*/
+  @media (max-width: 1200px) {
+    .main-content-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .stats-section {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .content {
+      padding: 16px;
+    }
+    
+    .stats-section {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    
+    .stat-card {
+      padding: 20px;
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .pickup-drop {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .transaction-item {
+      padding: 12px 8px;
+    }
+  }
+
+  /* ===============================
+     ADMIN CONTRACT STYLES
+  =================================*/
+  .left-panel-full {
+    flex: 1;
+    margin-right: 24px;
+  }
+
+  .filter-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .filter-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .status-filter {
+    padding: 8px 16px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: var(--white);
+    font-size: 14px;
+    color: var(--blue-900);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--gray-300);
+  }
+
+  .contract-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+  }
+
+  .contract-table th {
+    background: var(--gray-100);
+    padding: 16px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--blue-900);
+    font-size: 14px;
+    border-bottom: 1px solid var(--gray-300);
+  }
+
+  .contract-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 14px;
+    vertical-align: middle;
+  }
+
+  .contract-table tr:hover {
+    background: var(--blue-100);
+    cursor: pointer;
+  }
+
+  .contract-table tr.selected {
+    background: var(--blue-200) !important;
+    border-left: 4px solid var(--blue-500);
+  }
+
+  .contract-table tr.selected td {
+    border-color: var(--blue-300);
+  }
+
+  .table-car-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .table-car-image {
+    width: 50px;
+    height: 35px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid var(--gray-300);
+  }
+
+  .table-car-name {
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 2px 0;
+  }
+
+  .table-car-type {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .table-customer-info .table-customer-name {
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 2px 0;
+  }
+
+  .table-customer-info .table-customer-email {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .table-owner-info .table-owner-name {
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0 0 2px 0;
+  }
+
+  .table-owner-info .table-owner-email {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .contract-id {
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--blue-700);
+  }
+
+  .contract-type {
+    font-weight: 500;
+    color: var(--blue-600);
+  }
+
+  .table-price {
+    font-weight: 600;
+    color: var(--blue-700);
+    text-align: right;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-view, .btn-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-view {
+    background: var(--blue-500);
+    color: var(--white);
+  }
+
+  .btn-view:hover {
+    background: var(--blue-700);
+  }
+
+  .btn-action {
+    background: var(--gray-200);
+    color: var(--blue-900);
+  }
+
+  .btn-action:hover {
+    background: var(--gray-300);
+  }
+
+  .btn-primary, .btn-secondary, .btn-warning, .btn-danger {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--blue-500);
+    color: var(--white);
+  }
+
+  .btn-primary:hover {
+    background: var(--blue-700);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--gray-200);
+    color: var(--blue-900);
+  }
+
+  .btn-secondary:hover {
+    background: var(--gray-300);
+  }
+
+  .btn-warning {
+    background: #f59e0b;
+    color: var(--white);
+  }
+
+  .btn-warning:hover {
+    background: #d97706;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: var(--white);
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-active {
+    background: #10b981;
+    color: var(--white);
+  }
+
+  .status-pending {
+    background: #f59e0b;
+    color: var(--white);
+  }
+
+  .status-completed {
+    background: #6b7280;
+    color: var(--white);
+  }
+
+  .status-terminated {
+    background: #ef4444;
+    color: var(--white);
+  }
+
+  .table-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--gray-600);
+    font-style: italic;
+  }
+
+  /* Contract Details Panel */
+  #contractDetails {
+    display: none;
+  }
+
+  #contractDetails.show {
+    display: block !important;
+  }
+
+  #emptyState {
+    display: block;
+  }
+
+  .contract-detail-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .contract-detail-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .contract-detail-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin: 0;
+  }
+
+  .contract-detail-hash {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--blue-700);
+    background: var(--blue-100);
+    padding: 8px 12px;
+    border-radius: 6px;
+    word-break: break-all;
+    margin: 0;
+  }
+
+  .contract-participants {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .participant-section {
+    padding: 16px;
+    background: var(--gray-100);
+    border-radius: 12px;
+  }
+
+  .participant-section h5 {
+    color: var(--blue-900);
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  .participant-section p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .participant-section strong {
+    color: var(--blue-700);
+  }
+
+  .contract-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+
+  .empty-state-content {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray-600);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-content h3 {
+    color: var(--blue-900);
+    margin-bottom: 8px;
+  }
+
+  .empty-state-content p {
+    color: var(--gray-600);
+    font-size: 14px;
+  }
+
+  /* Responsive design for contracts */
+  @media (max-width: 1200px) {
+    .left-panel-full {
+      margin-right: 0;
+      margin-bottom: 24px;
+    }
+    
+    .main-content-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .content {
+      display: block;
+    }
+    
+    .right-panel {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .filter-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .filter-controls {
+      justify-content: space-between;
+    }
+    
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .contract-participants {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .contract-actions {
+      flex-direction: column;
+    }
+    
+    .table-container {
+      font-size: 12px;
+    }
+    
+    .contract-table th,
+    .contract-table td {
+      padding: 8px 6px;
+    }
+  }
+
+  /* Contract Details Improved Layout */
+  .hash-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gray-100);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .hash-text {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--gray-700);
+    word-break: break-all;
+    flex: 1;
+  }
+
+  .copy-btn {
+    background: var(--blue-600);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+  }
+
+  .copy-btn:hover {
+    background: var(--blue-700);
+  }
+
+  .date-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .date-item {
+    background: var(--gray-50);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .date-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .date-content {
+    flex: 1;
+  }
+
+  .date-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0 0 4px 0;
+    font-weight: 500;
+  }
+
+  .date-value {
+    font-size: 14px;
+    color: var(--gray-900);
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .participants-section {
+    margin-bottom: 20px;
+  }
+
+  .participant-card {
+    background: var(--gray-50);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .participant-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .participant-icon {
+    font-size: 18px;
+  }
+
+  .participant-header h5 {
+    font-size: 14px;
+    color: var(--blue-700);
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .participant-info {
+    margin-left: 26px;
+  }
+
+  .participant-name {
+    font-size: 14px;
+    color: var(--gray-900);
+    margin: 0 0 4px 0;
+    font-weight: 600;
+  }
+
+  .participant-email {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .price-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .price-card {
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .deposit-card {
+    background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+  }
+
+  .total-card {
+    background: linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%);
+    color: white;
+  }
+
+  .price-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .price-content {
+    flex: 1;
+  }
+
+  .price-label {
+    font-size: 12px;
+    margin: 0 0 4px 0;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .deposit-card .price-label {
+    color: #92400e;
+  }
+
+  .total-card .price-label {
+    color: white;
+  }
+
+  .price-value {
+    font-size: 18px;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .deposit-card .price-value {
+    color: #92400e;
+  }
+
+  .total-card .price-value {
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .date-info-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .price-info-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .date-item, .participant-card, .price-card {
+      padding: 12px;
+    }
+
+    .hash-container {
+      padding: 10px;
+    }
+
+    .hash-text {
+      font-size: 11px;
+    }
+  }
   

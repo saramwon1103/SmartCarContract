@@ -534,5 +534,481 @@ app.put("/api/user/:userId", (req, res) => {
   });
 });
 
+// ==================== ADMIN DASHBOARD API ENDPOINTS ====================
+
+// Get dashboard statistics
+app.get("/api/admin/dashboard/stats", async (req, res) => {
+  try {
+    const [totalCarsResult] = await query(`SELECT COUNT(*) as count FROM Cars`);
+    const [totalUsersResult] = await query(`SELECT COUNT(*) as count FROM Users WHERE Role IN ('User', 'Owner')`);
+    const [totalOwnersResult] = await query(`SELECT COUNT(*) as count FROM Users WHERE Role = 'Owner'`);
+    const [activeContractsResult] = await query(`SELECT COUNT(*) as count FROM Contracts WHERE Status IN ('Active', 'Pending')`);
+    
+    // Calculate total revenue from completed contracts
+    const [totalRevenueResult] = await query(`
+      SELECT SUM(TotalAmount) as revenue 
+      FROM Contracts 
+      WHERE Status = 'Completed'
+    `);
+    
+    const stats = {
+      totalCars: totalCarsResult.count,
+      totalUsers: totalUsersResult.count,
+      totalOwners: totalOwnersResult.count,
+      activeContracts: activeContractsResult.count,
+      totalRevenue: totalRevenueResult.revenue || 0,
+      monthlyGrowth: 12.5 // This could be calculated based on date comparison
+    };
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get car types data for chart
+app.get("/api/admin/dashboard/car-types", async (req, res) => {
+  try {
+    const carTypesQuery = `
+      SELECT Brand, COUNT(*) as count 
+      FROM Cars 
+      GROUP BY Brand 
+      ORDER BY count DESC
+    `;
+    const carTypesResult = await query(carTypesQuery);
+    
+    const labels = carTypesResult.map(row => row.Brand);
+    const data = carTypesResult.map(row => row.count);
+    const colors = ['#3563E9', '#264BC8', '#85A8F8', '#AEC8FC', '#D6E4FD', '#F1F3F6', '#E74C3C'];
+    
+    res.json({ 
+      success: true, 
+      chartData: { labels, data, colors } 
+    });
+  } catch (error) {
+    console.error("Error fetching car types data:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get recent transactions
+app.get("/api/admin/dashboard/recent-transactions", async (req, res) => {
+  try {
+    const transactionsQuery = `
+      SELECT 
+        c.ContractId,
+        cars.CarName,
+        cars.Brand as carType,
+        c.TotalAmount as amount,
+        c.StartDate as date,
+        cars.ImageURL
+      FROM Contracts c
+      JOIN Cars cars ON c.CarId = cars.CarId
+      WHERE c.Status IN ('Active', 'Completed')
+      ORDER BY c.StartDate DESC
+      LIMIT 10
+    `;
+    
+    const transactions = await query(transactionsQuery);
+    
+    res.json({ 
+      success: true, 
+      transactions: transactions.map(t => ({
+        contractId: t.ContractId,
+        carName: t.CarName,
+        carType: t.carType,
+        amount: parseFloat(t.amount),
+        date: t.date,
+        imageURL: t.ImageURL
+      }))
+    });
+  } catch (error) {
+    console.error("Error fetching recent transactions:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get rental details (latest active rental)
+app.get("/api/admin/dashboard/rental-details", async (req, res) => {
+  try {
+    const rentalQuery = `
+      SELECT 
+        c.ContractId,
+        cars.CarName,
+        cars.Brand as carType,
+        cars.ImageURL as carImage,
+        c.PickupLocation,
+        c.DropoffLocation,
+        c.StartDate as pickupDate,
+        c.EndDate as dropoffDate,
+        '09:00' as pickupTime,
+        '18:00' as dropoffTime,
+        c.TotalAmount as totalPrice,
+        u.FullName as renterName,
+        c.Status
+      FROM Contracts c
+      JOIN Cars cars ON c.CarId = cars.CarId
+      JOIN Users u ON c.UserId = u.UserId
+      WHERE c.Status = 'Active'
+      ORDER BY c.StartDate DESC
+      LIMIT 1
+    `;
+    
+    const rentalResult = await query(rentalQuery);
+    
+    if (rentalResult.length > 0) {
+      const rental = {
+        contractId: rentalResult[0].ContractId,
+        carName: rentalResult[0].CarName,
+        carType: rentalResult[0].carType,
+        carImage: rentalResult[0].carImage,
+        pickupLocation: rentalResult[0].PickupLocation,
+        dropoffLocation: rentalResult[0].DropoffLocation,
+        pickupDate: rentalResult[0].pickupDate,
+        dropoffDate: rentalResult[0].dropoffDate,
+        pickupTime: rentalResult[0].pickupTime,
+        dropoffTime: rentalResult[0].dropoffTime,
+        totalPrice: parseFloat(rentalResult[0].totalPrice),
+        renterName: rentalResult[0].renterName,
+        status: rentalResult[0].Status
+      };
+      
+      res.json({ success: true, rental });
+    } else {
+      res.json({ success: true, rental: null });
+    }
+  } catch (error) {
+    console.error("Error fetching rental details:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== ADMIN CONTRACT API ENDPOINTS ====================
+
+// Get all contracts with full details
+app.get("/api/admin/contracts", async (req, res) => {
+  try {
+    const contractsQuery = `
+      SELECT 
+        c.ContractId,
+        c.CarId,
+        c.UserId,
+        c.OwnerId,
+        c.Type,
+        c.StartDate,
+        c.EndDate,
+        c.PickupLocation,
+        c.DropoffLocation,
+        c.Deposit,
+        c.TotalAmount,
+        c.Status,
+        c.TXHash,
+        cars.CarName,
+        cars.Brand,
+        cars.ImageURL,
+        u_user.FullName as UserName,
+        u_user.Email as UserEmail,
+        u_owner.FullName as OwnerName,
+        u_owner.Email as OwnerEmail
+      FROM Contracts c
+      LEFT JOIN Cars cars ON c.CarId = cars.CarId
+      LEFT JOIN Users u_user ON c.UserId = u_user.UserId
+      LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+      ORDER BY c.StartDate DESC
+    `;
+    
+    const contracts = await query(contractsQuery);
+    
+    res.json({ 
+      success: true, 
+      contracts: contracts.map(contract => ({
+        ContractId: contract.ContractId,
+        CarId: contract.CarId,
+        UserId: contract.UserId,
+        OwnerId: contract.OwnerId,
+        Type: contract.Type,
+        StartDate: contract.StartDate,
+        EndDate: contract.EndDate,
+        PickupLocation: contract.PickupLocation,
+        DropoffLocation: contract.DropoffLocation,
+        Deposit: parseFloat(contract.Deposit),
+        TotalAmount: parseFloat(contract.TotalAmount),
+        Status: contract.Status,
+        TXHash: contract.TXHash,
+        CarName: contract.CarName,
+        Brand: contract.Brand,
+        ImageURL: contract.ImageURL,
+        UserName: contract.UserName,
+        UserEmail: contract.UserEmail,
+        OwnerName: contract.OwnerName,
+        OwnerEmail: contract.OwnerEmail
+      }))
+    });
+  } catch (error) {
+    console.error("Error fetching contracts:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single contract details
+app.get("/api/admin/contracts/:contractId", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    const contractQuery = `
+      SELECT 
+        c.*,
+        cars.CarName,
+        cars.Brand,
+        cars.ImageURL,
+        cars.PriceRent,
+        u_user.FullName as UserName,
+        u_user.Email as UserEmail,
+        u_user.WalletAddress as UserWallet,
+        u_owner.FullName as OwnerName,
+        u_owner.Email as OwnerEmail,
+        u_owner.WalletAddress as OwnerWallet
+      FROM Contracts c
+      LEFT JOIN Cars cars ON c.CarId = cars.CarId
+      LEFT JOIN Users u_user ON c.UserId = u_user.UserId
+      LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+      WHERE c.ContractId = ?
+    `;
+    
+    const contractResult = await query(contractQuery, [contractId]);
+    
+    if (contractResult.length === 0) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+    
+    const contract = contractResult[0];
+    res.json({
+      success: true,
+      contract: {
+        ...contract,
+        Deposit: parseFloat(contract.Deposit),
+        TotalAmount: parseFloat(contract.TotalAmount),
+        PriceRent: parseFloat(contract.PriceRent)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching contract details:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update contract status
+app.put("/api/admin/contracts/:contractId/status", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['Pending', 'Active', 'Completed', 'Terminated'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        error: `Invalid status. Valid values: ${validStatuses.join(', ')}` 
+      });
+    }
+    
+    const updateQuery = `
+      UPDATE Contracts 
+      SET Status = ?, UpdatedAt = NOW() 
+      WHERE ContractId = ?
+    `;
+    
+    const result = await query(updateQuery, [status, contractId]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+    
+    // Get updated contract
+    const updatedContract = await query(`
+      SELECT ContractId, Status FROM Contracts WHERE ContractId = ?
+    `, [contractId]);
+    
+    res.json({
+      success: true,
+      message: `Contract ${contractId} status updated to ${status}`,
+      contract: updatedContract[0]
+    });
+  } catch (error) {
+    console.error("Error updating contract status:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Terminate contract
+app.put("/api/admin/contracts/:contractId/terminate", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Check if contract exists and can be terminated
+    const contractCheck = await query(`
+      SELECT ContractId, Status FROM Contracts WHERE ContractId = ?
+    `, [contractId]);
+    
+    if (contractCheck.length === 0) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+    
+    const currentStatus = contractCheck[0].Status;
+    if (currentStatus === 'Completed' || currentStatus === 'Terminated') {
+      return res.status(400).json({ 
+        error: "Cannot terminate a completed or already terminated contract" 
+      });
+    }
+    
+    const terminateQuery = `
+      UPDATE Contracts 
+      SET Status = 'Terminated', UpdatedAt = NOW() 
+      WHERE ContractId = ?
+    `;
+    
+    const result = await query(terminateQuery, [contractId]);
+    
+    res.json({
+      success: true,
+      message: `Contract ${contractId} has been terminated`,
+      contractId: contractId,
+      status: 'Terminated'
+    });
+  } catch (error) {
+    console.error("Error terminating contract:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get contract statistics
+app.get("/api/admin/contracts/stats", async (req, res) => {
+  try {
+    const statsQueries = [
+      query(`SELECT COUNT(*) as total FROM Contracts`),
+      query(`SELECT COUNT(*) as active FROM Contracts WHERE Status = 'Active'`),
+      query(`SELECT COUNT(*) as pending FROM Contracts WHERE Status = 'Pending'`),
+      query(`SELECT COUNT(*) as completed FROM Contracts WHERE Status = 'Completed'`),
+      query(`SELECT COUNT(*) as terminated FROM Contracts WHERE Status = 'Terminated'`),
+      query(`SELECT SUM(TotalAmount) as totalRevenue FROM Contracts WHERE Status = 'Completed'`),
+      query(`SELECT AVG(TotalAmount) as avgContractValue FROM Contracts WHERE Status IN ('Active', 'Completed')`)
+    ];
+    
+    const [
+      totalResult,
+      activeResult,
+      pendingResult,
+      completedResult,
+      terminatedResult,
+      revenueResult,
+      avgValueResult
+    ] = await Promise.all(statsQueries);
+    
+    const stats = {
+      totalContracts: totalResult[0].total,
+      activeContracts: activeResult[0].active,
+      pendingContracts: pendingResult[0].pending,
+      completedContracts: completedResult[0].completed,
+      terminatedContracts: terminatedResult[0].terminated,
+      totalRevenue: parseFloat(revenueResult[0].totalRevenue) || 0,
+      avgContractValue: parseFloat(avgValueResult[0].avgContractValue) || 0
+    };
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error("Error fetching contract statistics:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search contracts
+app.get("/api/admin/contracts/search", async (req, res) => {
+  try {
+    const { q, status, type, startDate, endDate } = req.query;
+    
+    let searchQuery = `
+      SELECT 
+        c.ContractId,
+        c.CarId,
+        c.UserId,
+        c.OwnerId,
+        c.Type,
+        c.StartDate,
+        c.EndDate,
+        c.PickupLocation,
+        c.DropoffLocation,
+        c.Deposit,
+        c.TotalAmount,
+        c.Status,
+        c.TXHash,
+        cars.CarName,
+        cars.Brand,
+        cars.ImageURL,
+        u_user.FullName as UserName,
+        u_user.Email as UserEmail,
+        u_owner.FullName as OwnerName,
+        u_owner.Email as OwnerEmail
+      FROM Contracts c
+      LEFT JOIN Cars cars ON c.CarId = cars.CarId
+      LEFT JOIN Users u_user ON c.UserId = u_user.UserId
+      LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (q) {
+      searchQuery += ` AND (
+        c.ContractId LIKE ? OR 
+        cars.CarName LIKE ? OR 
+        cars.Brand LIKE ? OR
+        u_user.FullName LIKE ? OR 
+        u_user.Email LIKE ? OR
+        u_owner.FullName LIKE ? OR 
+        u_owner.Email LIKE ? OR
+        c.PickupLocation LIKE ? OR
+        c.DropoffLocation LIKE ?
+      )`;
+      const searchTerm = `%${q}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (status) {
+      searchQuery += ` AND c.Status = ?`;
+      params.push(status);
+    }
+    
+    if (type) {
+      searchQuery += ` AND c.Type = ?`;
+      params.push(type);
+    }
+    
+    if (startDate) {
+      searchQuery += ` AND c.StartDate >= ?`;
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      searchQuery += ` AND c.EndDate <= ?`;
+      params.push(endDate);
+    }
+    
+    searchQuery += ` ORDER BY c.StartDate DESC`;
+    
+    const contracts = await query(searchQuery, params);
+    
+    res.json({
+      success: true,
+      contracts: contracts.map(contract => ({
+        ...contract,
+        Deposit: parseFloat(contract.Deposit),
+        TotalAmount: parseFloat(contract.TotalAmount)
+      }))
+    });
+  } catch (error) {
+    console.error("Error searching contracts:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
