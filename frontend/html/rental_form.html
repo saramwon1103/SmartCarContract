@@ -19,6 +19,70 @@
       color: #666;
       font-style: italic;
     }
+    .wallet-section {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #dc3545;
+    }
+    .status-dot.connected {
+      background: #28a745;
+    }
+    .btn-wallet {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-wallet:hover {
+      background: #0056b3;
+    }
+    .btn-wallet:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    .token-info {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    .price-conversion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      padding: 10px;
+      background: #e7f3ff;
+      border-radius: 5px;
+    }
+    .error-message {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .success-message {
+      color: #28a745;
+      font-size: 14px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 
@@ -84,17 +148,55 @@
 
       <div class="form-row">
         <div>
-          <label for="deposit">Deposit ($)</label>
-          <input towards="number" id="deposit" readonly>
+          <label for="deposit">Deposit (CPT)</label>
+          <input type="number" id="deposit" readonly>
         </div>
         <div>
-          <label for="payment">Payment Method</label>
-          <select id="payment" required>
-            <option value="">-- Select --</option>
-            <option value="credit">Credit Card</option>
-            <option value="bank">Bank Transfer</option>
-            <option value="cash">Cash</option>
-          </select>
+          <label for="rental-amount">Rental Amount (CPT)</label>
+          <input type="number" id="rental-amount" readonly>
+        </div>
+      </div>
+
+      <!-- Wallet Section -->
+      <div class="wallet-section">
+        <h3>Wallet & Payment</h3>
+        
+        <div class="wallet-status">
+          <div class="status-dot" id="wallet-status-dot"></div>
+          <span id="wallet-status-text">Wallet not connected</span>
+        </div>
+        
+        <button type="button" class="btn-wallet" id="connect-wallet-btn">
+          Connect MetaMask Wallet
+        </button>
+        
+        <div id="wallet-info" style="display: none;">
+          <div class="token-info">
+            <h4>Account Information</h4>
+            <p><strong>Address:</strong> <span id="wallet-address"></span></p>
+            <p><strong>ETH Balance:</strong> <span id="eth-balance">0</span> ETH</p>
+            <p><strong>CPT Balance:</strong> <span id="cpt-balance">0</span> CPT</p>
+            
+            <div class="price-conversion">
+              <div>
+                <strong>Required CPT:</strong> <span id="total-cpt-needed">0</span> CPT
+              </div>
+              <div>
+                <strong>≈ ETH Cost:</strong> <span id="total-eth-cost">0</span> ETH
+              </div>
+            </div>
+            
+            <div id="insufficient-balance" style="display: none;">
+              <p class="error-message">⚠️ Insufficient CPT balance. You need to buy more tokens.</p>
+              <button type="button" class="btn-wallet" id="buy-tokens-btn">
+                Buy CPT Tokens
+              </button>
+            </div>
+            
+            <div id="sufficient-balance" style="display: none;">
+              <p class="success-message">✅ Sufficient CPT balance for this rental.</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -125,8 +227,23 @@
     </div>
   </footer>
 
-  <!-- ============= SCRIPT – ĐÃ SỬA LỖI ============= -->
+  <!-- ============= SCRIPT – WALLET & CPT INTEGRATION ============= -->
   <script>
+    // Constants for smart contracts
+    const CPT_TOKEN_PRICE = 0.000287; // ETH per CPT token
+    const CONTRACT_ADDRESSES = {
+      CPT_TOKEN: '0x...', // Địa chỉ contract CPT token sau khi deploy
+      FACTORY: '0x...'    // Địa chỉ contract Factory sau khi deploy
+    };
+
+    // Global variables
+    let web3 = null;
+    let currentAccount = null;
+    let cptContract = null;
+    let ethBalance = 0;
+    let cptBalance = 0;
+    let carData = null;
+
     // BỌC TOÀN BỘ TRONG IIFE → return HỢP LỆ
     (function () {
       const urlParams = new URLSearchParams(window.location.search);
@@ -143,6 +260,9 @@
       }
 
       console.log('Fetching car:', carId);
+      
+      // Initialize wallet functionality
+      initializeWallet();
 
       fetch(`http://localhost:3000/api/admin/cars/${carId}`)
         .then(res => {
@@ -155,6 +275,7 @@
           }
 
           const car = data.car;
+          carData = car; // Store globally
           console.log('Car loaded:', car);
 
           // Ẩn loading
@@ -164,11 +285,21 @@
           // Điền dữ liệu
           document.getElementById('car-name').value = `${car.CarName} (${car.Brand})`;
 
-          // Deposit: PriceBuy hoặc 10% PriceRent
-          const deposit = car.PriceBuy 
+          // Convert prices to CPT (assuming 1 USD = 1 CPT for simplicity)
+          const depositUSD = car.PriceBuy 
             ? parseFloat(car.PriceBuy) 
             : parseFloat(car.PriceRent || 0) * 0.1;
-          document.getElementById('deposit').value = deposit.toFixed(2);
+          const rentalAmountUSD = parseFloat(car.PriceRent || 0);
+          
+          // Convert to CPT (1 USD ≈ 1 CPT)
+          const depositCPT = depositUSD;
+          const rentalAmountCPT = rentalAmountUSD;
+          
+          document.getElementById('deposit').value = depositCPT.toFixed(2);
+          document.getElementById('rental-amount').value = rentalAmountCPT.toFixed(2);
+          
+          // Update CPT calculations
+          updateCPTCalculations();
 
           // Start Date = hôm nay
           const today = new Date().toISOString().split('T')[0];
@@ -209,20 +340,40 @@
           toggleEndFields(); // Gọi lần đầu
 
           // Submit
-          formEl.addEventListener('submit', (e) => {
+          formEl.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!currentAccount) {
+              alert('Please connect your wallet first!');
+              return;
+            }
+            
             const formData = new FormData(formEl);
             const data = Object.fromEntries(formData);
             data.carId = carId;
+            data.walletAddress = currentAccount;
 
             if (data.contractType === 'purchase') {
               data.endDate = null;
               data.endTime = null;
             }
 
-            console.log('Contract Data:', data);
-            alert('Hợp đồng đã được tạo! (Xem console)');
-            // Gửi về backend sau: fetch('/api/contracts', { method: 'POST', ... })
+            // Check CPT balance
+            const totalCPTNeeded = parseFloat(document.getElementById('deposit').value) + 
+                                  parseFloat(document.getElementById('rental-amount').value);
+            
+            if (cptBalance < totalCPTNeeded) {
+              alert('Insufficient CPT balance. Please buy more tokens first.');
+              return;
+            }
+
+            try {
+              // Create rental agreement through smart contract
+              await createRentalAgreement(data);
+            } catch (error) {
+              console.error('Contract creation failed:', error);
+              alert('Failed to create rental agreement: ' + error.message);
+            }
           });
         })
         .catch(err => {
@@ -231,6 +382,167 @@
           console.error('Fetch error:', err);
         });
     })();
+
+    // ===== WALLET FUNCTIONS =====
+    function initializeWallet() {
+      const connectBtn = document.getElementById('connect-wallet-btn');
+      const buyTokensBtn = document.getElementById('buy-tokens-btn');
+      
+      connectBtn.addEventListener('click', connectWallet);
+      buyTokensBtn.addEventListener('click', buyTokens);
+      
+      // Check if MetaMask is installed
+      if (typeof window.ethereum === 'undefined') {
+        connectBtn.textContent = 'Install MetaMask';
+        connectBtn.onclick = () => window.open('https://metamask.io/', '_blank');
+      }
+    }
+
+    async function connectWallet() {
+      try {
+        if (typeof window.ethereum === 'undefined') {
+          alert('MetaMask not installed!');
+          return;
+        }
+
+        // Request account access
+        const accounts = await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+        
+        currentAccount = accounts[0];
+        
+        // Initialize Web3
+        web3 = new Web3(window.ethereum);
+        
+        // Update UI
+        updateWalletUI();
+        
+        // Load balances
+        await loadBalances();
+        
+        console.log('Wallet connected:', currentAccount);
+      } catch (error) {
+        console.error('Wallet connection failed:', error);
+        alert('Failed to connect wallet: ' + error.message);
+      }
+    }
+
+    function updateWalletUI() {
+      const statusDot = document.getElementById('wallet-status-dot');
+      const statusText = document.getElementById('wallet-status-text');
+      const walletInfo = document.getElementById('wallet-info');
+      const connectBtn = document.getElementById('connect-wallet-btn');
+      const addressEl = document.getElementById('wallet-address');
+      
+      if (currentAccount) {
+        statusDot.classList.add('connected');
+        statusText.textContent = 'Wallet Connected';
+        walletInfo.style.display = 'block';
+        connectBtn.style.display = 'none';
+        addressEl.textContent = currentAccount.substring(0, 6) + '...' + currentAccount.substring(38);
+      } else {
+        statusDot.classList.remove('connected');
+        statusText.textContent = 'Wallet not connected';
+        walletInfo.style.display = 'none';
+        connectBtn.style.display = 'inline-block';
+      }
+    }
+
+    async function loadBalances() {
+      try {
+        // Get ETH balance
+        const ethBalanceWei = await web3.eth.getBalance(currentAccount);
+        ethBalance = parseFloat(web3.utils.fromWei(ethBalanceWei, 'ether'));
+        document.getElementById('eth-balance').textContent = ethBalance.toFixed(4);
+        
+        // Get CPT balance (mock for now)
+        // TODO: Implement actual CPT contract interaction
+        cptBalance = 100; // Mock balance
+        document.getElementById('cpt-balance').textContent = cptBalance.toFixed(2);
+        
+        updateCPTCalculations();
+        
+      } catch (error) {
+        console.error('Failed to load balances:', error);
+      }
+    }
+
+    function updateCPTCalculations() {
+      const depositCPT = parseFloat(document.getElementById('deposit').value || 0);
+      const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
+      const totalCPT = depositCPT + rentalCPT;
+      const totalETH = totalCPT * CPT_TOKEN_PRICE;
+      
+      document.getElementById('total-cpt-needed').textContent = totalCPT.toFixed(2);
+      document.getElementById('total-eth-cost').textContent = totalETH.toFixed(6);
+      
+      // Check if balance is sufficient
+      const insufficientEl = document.getElementById('insufficient-balance');
+      const sufficientEl = document.getElementById('sufficient-balance');
+      
+      if (currentAccount) {
+        if (cptBalance >= totalCPT) {
+          insufficientEl.style.display = 'none';
+          sufficientEl.style.display = 'block';
+        } else {
+          insufficientEl.style.display = 'block';
+          sufficientEl.style.display = 'none';
+        }
+      }
+    }
+
+    async function buyTokens() {
+      try {
+        const depositCPT = parseFloat(document.getElementById('deposit').value || 0);
+        const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
+        const totalCPTNeeded = depositCPT + rentalCPT;
+        const cptToBuy = Math.max(totalCPTNeeded - cptBalance, totalCPTNeeded);
+        const ethRequired = cptToBuy * CPT_TOKEN_PRICE;
+        
+        if (ethBalance < ethRequired) {
+          alert(`Insufficient ETH balance. You need ${ethRequired.toFixed(6)} ETH to buy ${cptToBuy.toFixed(2)} CPT tokens.`);
+          return;
+        }
+        
+        // TODO: Implement actual token purchase
+        alert(`Buying ${cptToBuy.toFixed(2)} CPT tokens for ${ethRequired.toFixed(6)} ETH...`);
+        console.log('Token purchase initiated:', { cptToBuy, ethRequired });
+        
+        // Mock successful purchase
+        cptBalance += cptToBuy;
+        ethBalance -= ethRequired;
+        document.getElementById('cpt-balance').textContent = cptBalance.toFixed(2);
+        document.getElementById('eth-balance').textContent = ethBalance.toFixed(4);
+        updateCPTCalculations();
+        
+      } catch (error) {
+        console.error('Token purchase failed:', error);
+        alert('Failed to buy tokens: ' + error.message);
+      }
+    }
+
+    async function createRentalAgreement(formData) {
+      try {
+        alert('Creating rental agreement on blockchain...');
+        console.log('Rental Agreement Data:', formData);
+        
+        // TODO: Implement actual smart contract interaction
+        // This would call the RentalAgreementFactory contract
+        
+        alert('Rental agreement created successfully!');
+        
+        // Redirect to contracts page or show confirmation
+        // window.location.href = '/my_contracts.html';
+        
+      } catch (error) {
+        throw error;
+      }
+    }
+
   </script>
+  
+  <!-- Web3.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
 </body>
 </html>
