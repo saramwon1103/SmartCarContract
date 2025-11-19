@@ -237,18 +237,18 @@
     font-size: 14px;
   }
   
-  .pickup-drop {
+  .rental-period {
     display: flex;
     justify-content: space-between;
     margin-bottom: 16px;
   }
   
-  .pickup-drop h5 {
+  .rental-period h5 {
     color: var(--blue-700);
     margin-bottom: 6px;
   }
   
-  .pickup-drop p {
+  .rental-period p {
     font-size: 14px;
     color: var(--gray-600);
   }
@@ -676,38 +676,38 @@
     margin-left: auto;
   }
 
-  .pickup-drop {
+  .rental-period {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
     margin-bottom: 24px;
   }
 
-  .location-item {
+  .period-item {
     display: flex;
     gap: 12px;
     align-items: flex-start;
   }
 
-  .location-icon {
+  .period-icon {
     font-size: 20px;
     margin-top: 4px;
   }
 
-  .location-item h5 {
+  .period-item h5 {
     font-size: 16px;
     font-weight: 600;
     color: var(--blue-900);
     margin: 0 0 8px 0;
   }
 
-  .location-item p {
+  .period-item p {
     font-size: 14px;
     color: var(--gray-600);
     margin: 2px 0;
   }
 
-  .location-item strong {
+  .period-item strong {
     color: var(--blue-700);
   }
 
@@ -957,7 +957,7 @@
       text-align: center;
     }
     
-    .pickup-drop {
+    .rental-period {
       grid-template-columns: 1fr;
       gap: 16px;
     }

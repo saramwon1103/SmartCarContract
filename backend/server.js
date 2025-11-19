@@ -15,6 +15,48 @@ const db = mysql.createConnection({
   password: "",
   database: "CarRentalDApp"
 });
+  
+// Pin agreement metadata to IPFS via Pinata and optionally attach to Contracts row
+app.post('/api/ipfs/pinAgreement', async (req, res) => {
+  try {
+    const { contractId, contractAddress, metadata } = req.body;
+    if (!metadata) return res.status(400).json({ error: 'Missing metadata in request body' });
+
+    // metadata should be a plain JS object
+    const pinResult = await pinJSONToIPFS(metadata);
+    const ipfsCid = pinResult.IpfsHash || pinResult.IpfsHash; // compatibility
+    const metadataUri = `ipfs://${ipfsCid}`;
+
+    // Try to update Contracts table if contractId or contractAddress provided
+    if (contractId || contractAddress) {
+      const fieldValue = metadataUri;
+      try {
+        if (contractId) {
+          await query(`UPDATE Contracts SET MetadataURI = ? WHERE ContractId = ?`, [fieldValue, contractId]);
+        } else {
+          await query(`UPDATE Contracts SET MetadataURI = ? WHERE ContractAddress = ?`, [fieldValue, contractAddress]);
+        }
+      } catch (err) {
+        // If the column doesn't exist, create it then update
+        if (err && err.code === 'ER_BAD_FIELD_ERROR') {
+          await query(`ALTER TABLE Contracts ADD COLUMN MetadataURI VARCHAR(255) DEFAULT NULL`);
+          if (contractId) {
+            await query(`UPDATE Contracts SET MetadataURI = ? WHERE ContractId = ?`, [fieldValue, contractId]);
+          } else {
+            await query(`UPDATE Contracts SET MetadataURI = ? WHERE ContractAddress = ?`, [fieldValue, contractAddress]);
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    res.json({ success: true, ipfs: pinResult, uri: metadataUri });
+  } catch (err) {
+    console.error('Error pinning metadata to IPFS:', err?.message || err);
+    res.status(500).json({ error: err?.message || String(err) });
+  }
+});
 
 db.connect(err => {
   if (err) return console.error("MySQL connection error:", err);
@@ -1169,5 +1211,125 @@ app.post("/api/auth/logout", (req, res) => {
   });
 });
 
-const PORT = 3000;
+// ==================== ONCHAIN CONTRACT API ENDPOINTS ====================
+
+// API để tạo hợp đồng onchain mới
+app.post("/api/contracts/onchain/create", async (req, res) => {
+  try {
+    const {
+      contractAddress,
+      txHash,
+      carId,
+      renterUserId,   // UserId trong DB (Uxxx)
+      ownerUserId,    // OwnerId trong DB (Uxxx)
+      type,           // "Rent" hoặc "Buy"
+      startDate,      // optional (ISO string)
+      endDate,        // optional
+      deposit,
+      totalPrice
+    } = req.body;
+
+    if (!contractAddress || !txHash || !carId || !renterUserId || !ownerUserId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // generate ContractId similar to generateSequentialId()
+    const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
+
+    const sql = `INSERT INTO Contracts (ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, Deposit, TotalAmount, Status, TXHash, ContractAddress)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const status = "Pending signature";
+    await query(sql, [contractId, carId, renterUserId, ownerUserId, type || "Rent", startDate || null, endDate || null, deposit || 0, totalPrice || 0, status, txHash, contractAddress]);
+
+    res.json({ success: true, contractId, contractAddress, txHash });
+  } catch (err) {
+    console.error("Create onchain contract error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API callback khi hợp đồng onchain đã được ký
+app.post("/api/contracts/onchain/signed", async (req, res) => {
+  try {
+    const { contractAddress, txHash, signerUserId, role } = req.body; // role: "owner" | "user"
+    if (!contractAddress || !txHash || !signerUserId || !role) return res.status(400).json({ error: "Missing" });
+
+    // Tìm contract bằng contractAddress hoặc TXHash
+    const rows = await query(`SELECT ContractId, Status FROM Contracts WHERE ContractAddress = ? LIMIT 1`, [contractAddress]);
+    if (!rows.length) return res.status(404).json({ error: "Contract not found" });
+
+    const contractId = rows[0].ContractId;
+
+    // Lưu một cột field để track (ví dụ thêm OwnerSigned, UserSigned) OR lưu activity
+    // Nếu không muốn thêm cột, bạn có thể lưu vào một bảng `contract_events` hoặc update Status text.
+    // Ví dụ cập nhật Status tạm thời:
+    await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, role === "owner" ? "OwnerSigned" : "UserSigned", txHash, signerUserId, new Date()]);
+
+    res.json({ success: true, contractId });
+  } catch (err) {
+    console.error("Signed callback error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API endpoint nhận event AgreementCreated từ listener
+app.post("/api/contracts/onchain/created_event", async (req, res) => {
+  try {
+    const { contractAddress, owner, user, txHash } = req.body;
+    if (!contractAddress || !txHash) return res.status(400).json({ error: "Missing contractAddress or txHash" });
+
+    // Cập nhật record contract nếu đã tồn tại bằng TXHash
+    const result = await query(`UPDATE Contracts SET ContractAddress = ?, UpdatedAt = NOW() WHERE TXHash = ?`, [contractAddress, txHash]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "No contract found with given TXHash to attach contractAddress" });
+    }
+
+    // Ghi event vào ContractEvents để audit
+    const rows = await query(`SELECT ContractId FROM Contracts WHERE TXHash = ? LIMIT 1`, [txHash]);
+    const contractId = rows.length ? rows[0].ContractId : null;
+    if (contractId) {
+      await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementCreated', txHash, owner || null, new Date()]);
+    }
+
+    res.json({ success: true, contractAddress, txHash, contractId });
+  } catch (err) {
+    console.error("Error on created_event:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API endpoint nhận event AgreementActivated từ listener
+app.post("/api/contracts/onchain/activated", async (req, res) => {
+  try {
+    const { contractAddress, txHash, startDate, endDate } = req.body; // startDate/endDate are unix timestamps (seconds)
+    if (!contractAddress && !txHash) return res.status(400).json({ error: "Missing contractAddress or txHash" });
+
+    const params = [contractAddress, txHash, startDate ? new Date(startDate * 1000) : null, endDate ? new Date(endDate * 1000) : null];
+
+    const updateQuery = `
+      UPDATE Contracts
+      SET Status = 'Active', StartDate = COALESCE(?, StartDate), EndDate = COALESCE(?, EndDate), UpdatedAt = NOW()
+      WHERE ContractAddress = ? OR TXHash = ?
+    `;
+
+    const result = await query(updateQuery, [params[2], params[3], contractAddress, txHash]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "No contract found to mark Active" });
+    }
+
+    // Insert event
+    const rows = await query(`SELECT ContractId FROM Contracts WHERE ContractAddress = ? OR TXHash = ? LIMIT 1`, [contractAddress, txHash]);
+    const contractId = rows.length ? rows[0].ContractId : null;
+    if (contractId) {
+      await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementActivated', txHash || null, null, new Date()]);
+    }
+
+    res.json({ success: true, contractId });
+  } catch (err) {
+    console.error("Error on activated callback:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -352,8 +352,8 @@ document.addEventListener('DOMContentLoaded', () => {
         contract.OwnerName.toLowerCase().includes(searchTerm) ||
         contract.OwnerEmail.toLowerCase().includes(searchTerm) ||
         contract.Type.toLowerCase().includes(searchTerm) ||
-        contract.PickupLocation.toLowerCase().includes(searchTerm) ||
-        contract.DropoffLocation.toLowerCase().includes(searchTerm);
+        contract.StartDate.toLowerCase().includes(searchTerm) ||
+        contract.EndDate.toLowerCase().includes(searchTerm);
       
       const matchStatus = !statusValue || contract.Status === statusValue;
       return matchSearch && matchStatus;

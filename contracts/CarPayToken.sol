@@ -86,7 +86,7 @@ contract CarPayToken {
     // -------------------
     // Mua token bằng ETH
     // -------------------
-    function buyTokens() external payable {
+    function buyTokens() public payable {
         require(msg.value > 0, "Send ETH to buy tokens");
 
         uint256 tokensToBuy = (msg.value * (10 ** uint256(decimals))) / tokenPrice;
