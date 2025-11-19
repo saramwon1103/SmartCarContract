@@ -45,6 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
       updateStatsDisplay(fallbackStats);
     }
   }
+
+  // Utility function to calculate days between two dates
+  function calculateDaysBetween(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
   
   function updateStatsDisplay(stats) {
     // Update stat cards
@@ -259,12 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
         carName: 'Honda City',
         carType: 'Honda',
         carImage: 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreihehfcugfr2vcyrwie3n3m5euwj7mb72fj5o7v66kakaobvw6w3x4',
-        pickupLocation: 'Ho Chi Minh City',
-        dropoffLocation: 'Ho Chi Minh City',
-        pickupDate: '2025-11-17',
-        dropoffDate: '2025-11-20',
-        pickupTime: '09:00',
-        dropoffTime: '18:00',
+        startDate: '2025-11-17',
+        endDate: '2025-11-20',
         totalPrice: 88.00,
         renterName: 'Trần Thị Hoa',
         status: 'Active'
@@ -289,21 +294,26 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
     
-    // Update pickup/dropoff info
-    const pickupDrop = document.querySelector('.pickup-drop');
-    if (pickupDrop) {
-      pickupDrop.innerHTML = `
-        <div>
-          <h5>Pick - Up</h5>
-          <p>Location: ${rental.pickupLocation}</p>
-          <p>Date: ${formatDate(rental.pickupDate)}</p>
-          <p>Time: ${rental.pickupTime}</p>
+    // Update rental period info
+    const rentalPeriod = document.querySelector('.rental-period');
+    if (rentalPeriod) {
+      const days = calculateDaysBetween(rental.startDate, rental.endDate);
+      rentalPeriod.innerHTML = `
+        <div class="period-item start-date">
+          <div class="period-icon">📅</div>
+          <div>
+            <h5>Start Date</h5>
+            <p><strong>Date:</strong> ${formatDate(rental.startDate)}</p>
+            <p><strong>Status:</strong> ${rental.status}</p>
+          </div>
         </div>
-        <div>
-          <h5>Drop - Off</h5>
-          <p>Location: ${rental.dropoffLocation}</p>
-          <p>Date: ${formatDate(rental.dropoffDate)}</p>
-          <p>Time: ${rental.dropoffTime}</p>
+        <div class="period-item end-date">
+          <div class="period-icon">🔚</div>
+          <div>
+            <h5>End Date</h5>
+            <p><strong>Date:</strong> ${formatDate(rental.endDate)}</p>
+            <p><strong>Days:</strong> ${days} days</p>
+          </div>
         </div>
       `;
     }
