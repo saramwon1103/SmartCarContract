@@ -136,21 +136,13 @@
 
   // Handle logout
   function handleLogout() {
-    if (confirm('Are you sure you want to log out?')) {
-      // Try to call backend logout
-      fetch('../../backend/logout.php', {
-        method: 'POST',
-        credentials: 'same-origin'
-      })
-      .then(response => {
-        // Redirect to login page
-        window.location.href = 'login.html';
-      })
-      .catch(error => {
-        console.error('Logout error:', error);
-        // Redirect to login page anyway
-        window.location.href = 'login.html';
-      });
+    // Use AuthManager if available
+    if (typeof AuthManager !== 'undefined' && AuthManager.logout) {
+      AuthManager.logout();
+    } else {
+      // Fallback: clear localStorage and redirect
+      localStorage.removeItem('currentUser');
+      window.location.href = 'login.html';
     }
   }
 

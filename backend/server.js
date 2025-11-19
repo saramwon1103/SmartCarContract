@@ -1010,5 +1010,164 @@ app.get("/api/admin/contracts/search", async (req, res) => {
   }
 });
 
+// ==================== AUTHENTICATION API ENDPOINTS ====================
+
+// Register endpoint
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { fullname, email, password, role, phone } = req.body;
+
+    // Validate required fields
+    if (!fullname || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields: fullname, email, password" 
+      });
+    }
+
+    // Check if email already exists
+    const existing = await query(`SELECT UserId FROM Users WHERE Email = ? LIMIT 1`, [email]);
+    if (existing.length) {
+      return res.status(409).json({ 
+        success: false, 
+        error: "Email already exists" 
+      });
+    }
+
+    // Generate UserId
+    const userId = await generateUserId();
+    const passwordHash = hashPassword(password);
+    
+    // Default role is User if not specified, only allow User or Owner for registration
+    const userRole = (role === "Owner") ? "Owner" : "User";
+
+    // Insert new user
+    await query(
+      `INSERT INTO Users (UserId, FullName, Email, PasswordHash, Role, CreatedAt)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [userId, fullname, email, passwordHash, userRole]
+    );
+
+    // Get created user
+    const [user] = await query(
+      `SELECT UserId, FullName, Email, Role, CreatedAt FROM Users WHERE UserId = ?`,
+      [userId]
+    );
+
+    res.status(201).json({ 
+      success: true, 
+      message: "Registration successful",
+      user: user
+    });
+  } catch (error) {
+    console.error("Error in registration:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Login endpoint
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing email or password" 
+      });
+    }
+
+    // Get user by email
+    const users = await query(
+      `SELECT UserId, FullName, Email, PasswordHash, Role, WalletAddress, AvatarURL, CreatedAt 
+       FROM Users WHERE Email = ? LIMIT 1`,
+      [email]
+    );
+
+    if (!users.length) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Invalid email or password" 
+      });
+    }
+
+    const user = users[0];
+    const passwordHash = hashPassword(password);
+
+    // Verify password
+    if (passwordHash !== user.PasswordHash) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Invalid email or password" 
+      });
+    }
+
+    // Remove password hash from response
+    delete user.PasswordHash;
+
+    res.json({ 
+      success: true, 
+      message: "Login successful",
+      user: user
+    });
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Get current user (check session)
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Not authenticated" 
+      });
+    }
+
+    const users = await query(
+      `SELECT UserId, FullName, Email, Role, WalletAddress, AvatarURL, CreatedAt 
+       FROM Users WHERE UserId = ? LIMIT 1`,
+      [userId]
+    );
+
+    if (!users.length) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      user: users[0]
+    });
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Logout endpoint (client-side will handle clearing localStorage)
+app.post("/api/auth/logout", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "Logout successful" 
+  });
+});
+
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

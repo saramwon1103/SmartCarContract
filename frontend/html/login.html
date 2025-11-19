@@ -132,18 +132,69 @@
             }
         }
 
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const submitBtn = this.querySelector('.submit-btn');
             
-            // Here you would typically send the data to your backend
-            console.log('Login attempt:', { email, password });
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Signing in...</span><i class="fa-solid fa-spinner fa-spin"></i>';
             
-            // For demo purposes, redirect to home page
-            alert('Login successful!');
-            window.location.href = 'home.html';
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Save user info to localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('isLoggedIn', 'true');
+                    
+                    // Redirect based on role
+                    if (data.user.Role === 'Admin') {
+                        window.location.href = 'admin_dashboard.html';
+                    } else if (data.user.Role === 'Owner') {
+                        window.location.href = 'owner_home.html';
+                    } else {
+                        window.location.href = 'home.html';
+                    }
+                } else {
+                    alert('Login failed: ' + data.error);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>Sign In</span><i class="fa-solid fa-arrow-right"></i>';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('An error occurred. Please check if the server is running on port 3000.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Sign In</span><i class="fa-solid fa-arrow-right"></i>';
+            }
+        });
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (isLoggedIn === 'true' && user.UserId) {
+                // Redirect based on role
+                if (user.Role === 'Admin') {
+                    window.location.href = 'admin_dashboard.html';
+                } else if (user.Role === 'Owner') {
+                    window.location.href = 'owner_home.html';
+                } else {
+                    window.location.href = 'home.html';
+                }
+            }
         });
     </script>
 </body>

@@ -54,9 +54,26 @@
                             <span class="validation-message"></span>
                         </div>
 
+                        <!-- Role Selection -->
+                        <div class="form-group">
+                            <label for="role" class="form-label">Register as</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-user-tag input-icon"></i>
+                                <select 
+                                    id="role" 
+                                    name="role" 
+                                    class="form-input"
+                                    required
+                                >
+                                    <option value="User">User (Rent/Buy Cars)</option>
+                                    <option value="Owner">Owner (List Cars for Rent/Sale)</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <!-- Phone -->
                         <div class="form-group">
-                            <label for="phone" class="form-label">Phone Number</label>
+                            <label for="phone" class="form-label">Phone Number (Optional)</label>
                             <div class="input-wrapper">
                                 <i class="fa-solid fa-phone input-icon"></i>
                                 <input 
@@ -65,7 +82,6 @@
                                     name="phone" 
                                     class="form-input"
                                     placeholder="Enter your phone number"
-                                    required
                                 >
                             </div>
                         </div>
@@ -306,37 +322,65 @@
         });
 
         // Form Submission
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const formData = {
-                fullName: document.getElementById('fullName').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                password: document.getElementById('password').value,
-                confirmPassword: document.getElementById('confirmPassword').value,
-                terms: document.getElementById('terms').checked,
-                newsletter: document.getElementById('newsletter').checked
-            };
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const role = document.getElementById('role').value;
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const terms = document.getElementById('terms').checked;
+            const submitBtn = this.querySelector('.submit-btn');
             
             // Validate passwords match
-            if (formData.password !== formData.confirmPassword) {
+            if (password !== confirmPassword) {
                 alert('Passwords do not match!');
                 return;
             }
             
             // Validate terms
-            if (!formData.terms) {
+            if (!terms) {
                 alert('Please accept the Terms & Conditions');
                 return;
             }
             
-            // Here you would typically send the data to your backend
-            console.log('Registration data:', formData);
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>Creating Account...</span><i class="fa-solid fa-spinner fa-spin"></i>';
             
-            // For demo purposes
-            alert('Account created successfully!');
-            window.location.href = 'login.html';
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        fullname: fullName, 
+                        email, 
+                        password,
+                        role,
+                        phone 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Account created successfully! Please login.');
+                    window.location.href = 'login.html';
+                } else {
+                    alert('Registration failed: ' + data.error);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>Create Account</span><i class="fa-solid fa-arrow-right"></i>';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert('An error occurred. Please check if the server is running on port 3000.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Create Account</span><i class="fa-solid fa-arrow-right"></i>';
+            }
         });
     </script>
 </body>
