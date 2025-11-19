@@ -67,7 +67,7 @@ contract RentalAgreement {
         uint256 _vehicleId,
         uint256 _rentAmount,
         uint256 _depositAmount,
-        address _tokenAddress
+        address payable _tokenAddress
     ) {
         require(_admin != address(0) && _owner != address(0) && _user != address(0), "Invalid address");
 

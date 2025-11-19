@@ -8,9 +8,10 @@ async function main() {
   console.log("👤 Owner:", owner.address);
   console.log("👤 User:", user.address);
 
-  // 1️⃣ Deploy token
+  // 1️⃣ Deploy token (provide initial supply)
   const Token = await ethers.getContractFactory("CarPayToken");
-  const token = await Token.deploy(owner.address);
+  const initialSupply = ethers.parseUnits("1000000", 18); // 1,000,000 CPT with 18 decimals
+  const token = await Token.deploy(initialSupply);
   await token.waitForDeployment();
   console.log("✅ Token deployed at:", await token.getAddress());
 

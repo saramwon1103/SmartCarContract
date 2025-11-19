@@ -33,7 +33,7 @@ contract RentalAgreementFactory {
             _vehicleId,
             _rentAmount,
             _depositAmount,
-            _token
+            payable(_token)
         );
 
         allAgreements.push(agreement);
