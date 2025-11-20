@@ -5,14 +5,108 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import BlockchainService from "./blockchain.js";
+import multer from "multer";
+import fetch from "node-fetch";
+import FormData from "form-data";
+import fs from "fs";
+import PDFDocument from "pdfkit";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Support form data
+
+// Improved CORS configuration
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// Increase timeouts for large requests (PDF generation)
+app.use((req, res, next) => {
+  req.setTimeout(300000); // 5 minutes
+  res.setTimeout(300000); // 5 minutes
+  next();
+});
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Support form data
+
+// Configure multer for file uploads
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
+
+// IPFS/Pinata configuration
+const PINATA_API_KEY = process.env.PINATA_API_KEY;
+const PINATA_SECRET_KEY = process.env.PINATA_SECRET_KEY;
+const PINATA_JWT = process.env.PINATA_JWT;
+
+// IPFS Helper Functions
+async function pinFileToIPFS(filePath, filename) {
+  const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+  const data = new FormData();
+  data.append('file', fs.createReadStream(filePath), filename);
+
+  const metadata = JSON.stringify({
+    name: filename,
+    keyvalues: {
+      type: 'car-rental-file'
+    }
+  });
+  data.append('pinataMetadata', metadata);
+
+  const options = JSON.stringify({
+    cidVersion: 1,
+  });
+  data.append('pinataOptions', options);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PINATA_JWT}`,
+      ...data.getHeaders()
+    },
+    body: data
+  });
+
+  return await res.json();
+}
+
+async function pinJSONToIPFS(jsonObject) {
+  const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
+  const data = {
+    pinataContent: jsonObject,
+    pinataMetadata: {
+      name: `contract-metadata-${Date.now()}`,
+      keyvalues: {
+        type: 'car-rental-metadata'
+      }
+    },
+    pinataOptions: {
+      cidVersion: 1
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${PINATA_JWT}`
+    },
+    body: JSON.stringify(data)
+  });
+
+  return await res.json();
+}
+
+async function retrieveFromIPFS(cid) {
+  const url = `https://gateway.pinata.cloud/ipfs/${cid}`;
+  const res = await fetch(url);
+  return res;
+}
 
 // Initialize blockchain service
 const blockchainService = new BlockchainService();
@@ -67,6 +161,272 @@ app.post('/api/ipfs/pinAgreement', async (req, res) => {
   }
 });
 
+// IPFS API Endpoints
+
+// 1. Upload image file to IPFS (car photos, driver license, etc.)
+app.post('/api/ipfs/upload-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const { contractId, imageType } = req.body; // imageType: 'car', 'license', 'avatar'
+    
+    const pinResult = await pinFileToIPFS(req.file.path, req.file.originalname);
+    
+    if (pinResult.error) {
+      return res.status(500).json({ error: 'Failed to upload to IPFS', details: pinResult.error });
+    }
+
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinResult.IpfsHash}`;
+    
+    // Clean up local file
+    fs.unlinkSync(req.file.path);
+
+    // Optionally update database with image URL
+    if (contractId && imageType) {
+      try {
+        if (imageType === 'car') {
+          await query(`UPDATE Cars SET ImageURL = ? WHERE CarId = (SELECT CarId FROM Contracts WHERE ContractId = ?)`, 
+                     [ipfsUrl, contractId]);
+        }
+        // Add more imageType cases as needed
+      } catch (err) {
+        console.log('Warning: Could not update database with image URL:', err.message);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      ipfsHash: pinResult.IpfsHash,
+      ipfsUrl: ipfsUrl,
+      imageType: imageType
+    });
+
+  } catch (err) {
+    console.error('Error uploading image to IPFS:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Generate and upload contract PDF to IPFS
+app.post('/api/ipfs/upload-contract-pdf', async (req, res) => {
+  try {
+    const { contractId } = req.body;
+    
+    if (!contractId) {
+      return res.status(400).json({ error: 'Contract ID is required' });
+    }
+
+    // Fetch contract data
+    const contractQuery = `
+      SELECT c.*, cars.CarName, cars.Brand, cars.ImageURL,
+             u_user.FullName as UserName, u_user.Email as UserEmail,
+             u_owner.FullName as OwnerName, u_owner.Email as OwnerEmail
+      FROM Contracts c
+      LEFT JOIN Cars cars ON c.CarId = cars.CarId
+      LEFT JOIN Users u_user ON c.UserId = u_user.UserId  
+      LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+      WHERE c.ContractId = ?
+    `;
+    
+    const contracts = await query(contractQuery, [contractId]);
+    if (!contracts.length) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    const contract = contracts[0];
+
+    // Generate PDF
+    const doc = new PDFDocument();
+    const pdfPath = `uploads/contract_${contractId}_${Date.now()}.pdf`;
+    doc.pipe(fs.createWriteStream(pdfPath));
+
+    // PDF Content
+    doc.fontSize(20).text('Car Rental Agreement', 100, 100);
+    doc.fontSize(12);
+    doc.text(`Contract ID: ${contract.ContractId}`, 100, 140);
+    doc.text(`Car: ${contract.CarName} ${contract.Brand}`, 100, 160);
+    doc.text(`Renter: ${contract.UserName} (${contract.UserEmail})`, 100, 180);
+    doc.text(`Owner: ${contract.OwnerName} (${contract.OwnerEmail})`, 100, 200);
+    doc.text(`Type: ${contract.Type}`, 100, 220);
+    doc.text(`Start Date: ${contract.StartDate}`, 100, 240);
+    doc.text(`End Date: ${contract.EndDate || 'N/A'}`, 100, 260);
+    doc.text(`Deposit: $${contract.Deposit}`, 100, 280);
+    doc.text(`Total Price: $${contract.TotalPrice}`, 100, 300);
+    doc.text(`Status: ${contract.Status}`, 100, 320);
+    doc.text(`Transaction Hash: ${contract.TXHash}`, 100, 340);
+    doc.text(`Generated: ${new Date().toISOString()}`, 100, 380);
+
+    doc.end();
+
+    // Wait for PDF generation to complete
+    await new Promise((resolve) => {
+      doc.on('end', resolve);
+    });
+
+    // Upload PDF to IPFS
+    const pinResult = await pinFileToIPFS(pdfPath, `contract_${contractId}.pdf`);
+    
+    if (pinResult.error) {
+      return res.status(500).json({ error: 'Failed to upload PDF to IPFS', details: pinResult.error });
+    }
+
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinResult.IpfsHash}`;
+
+    // Clean up local PDF file
+    fs.unlinkSync(pdfPath);
+
+    // Update contract with PDF URL (if MetadataURI column exists)
+    try {
+      await query(`UPDATE Contracts SET MetadataURI = ? WHERE ContractId = ?`, [ipfsUrl, contractId]);
+    } catch (err) {
+      console.log('Warning: Could not update contract with PDF URL:', err.message);
+    }
+
+    res.json({
+      success: true,
+      ipfsHash: pinResult.IpfsHash,
+      ipfsUrl: ipfsUrl,
+      contractId: contractId
+    });
+
+  } catch (err) {
+    console.error('Error generating/uploading contract PDF:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Retrieve file from IPFS
+app.get('/api/ipfs/retrieve/:cid', async (req, res) => {
+  try {
+    const { cid } = req.params;
+    
+    if (!cid) {
+      return res.status(400).json({ error: 'IPFS CID is required' });
+    }
+
+    const ipfsResponse = await retrieveFromIPFS(cid);
+    
+    if (!ipfsResponse.ok) {
+      return res.status(404).json({ error: 'File not found on IPFS' });
+    }
+
+    // Check content type
+    const contentType = ipfsResponse.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      // Return JSON data
+      const jsonData = await ipfsResponse.json();
+      res.json({ success: true, data: jsonData, contentType });
+    } else {
+      // Return file URL for direct access
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+      res.json({ 
+        success: true, 
+        ipfsUrl: ipfsUrl,
+        contentType: contentType,
+        message: 'File can be accessed directly via ipfsUrl'
+      });
+    }
+
+  } catch (err) {
+    console.error('Error retrieving from IPFS:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Upload contract metadata JSON to IPFS
+app.post('/api/ipfs/upload-metadata', async (req, res) => {
+  try {
+    const { contractId, additionalData } = req.body;
+    
+    if (!contractId) {
+      return res.status(400).json({ error: 'Contract ID is required' });
+    }
+
+    // Fetch full contract data
+    const contractQuery = `
+      SELECT c.*, cars.*, 
+             u_user.FullName as UserName, u_user.Email as UserEmail, u_user.WalletAddress as UserWallet,
+             u_owner.FullName as OwnerName, u_owner.Email as OwnerEmail, u_owner.WalletAddress as OwnerWallet
+      FROM Contracts c
+      LEFT JOIN Cars cars ON c.CarId = cars.CarId
+      LEFT JOIN Users u_user ON c.UserId = u_user.UserId  
+      LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+      WHERE c.ContractId = ?
+    `;
+    
+    const contracts = await query(contractQuery, [contractId]);
+    if (!contracts.length) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    const contract = contracts[0];
+
+    // Create comprehensive metadata
+    const metadata = {
+      contractInfo: {
+        contractId: contract.ContractId,
+        type: contract.Type,
+        status: contract.Status,
+        startDate: contract.StartDate,
+        endDate: contract.EndDate,
+        deposit: contract.Deposit,
+        totalPrice: contract.TotalPrice,
+        txHash: contract.TXHash,
+        createdAt: new Date().toISOString()
+      },
+      carInfo: {
+        carId: contract.CarId,
+        carName: contract.CarName,
+        brand: contract.Brand,
+        modelYear: contract.ModelYear,
+        priceRent: contract.PriceRent,
+        priceBuy: contract.PriceBuy,
+        imageURL: contract.ImageURL,
+        description: contract.Description
+      },
+      userInfo: {
+        renter: {
+          name: contract.UserName,
+          email: contract.UserEmail,
+          wallet: contract.UserWallet
+        },
+        owner: {
+          name: contract.OwnerName,
+          email: contract.OwnerEmail,
+          wallet: contract.OwnerWallet
+        }
+      },
+      additionalData: additionalData || {},
+      ipfsInfo: {
+        uploadedAt: new Date().toISOString(),
+        version: "1.0"
+      }
+    };
+
+    const pinResult = await pinJSONToIPFS(metadata);
+    
+    if (pinResult.error) {
+      return res.status(500).json({ error: 'Failed to upload metadata to IPFS', details: pinResult.error });
+    }
+
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinResult.IpfsHash}`;
+
+    res.json({
+      success: true,
+      ipfsHash: pinResult.IpfsHash,
+      ipfsUrl: ipfsUrl,
+      metadata: metadata
+    });
+
+  } catch (err) {
+    console.error('Error uploading metadata to IPFS:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 db.connect(err => {
   if (err) return console.error("MySQL connection error:", err);
   console.log("Connected to MySQL database!");
@@ -87,14 +447,71 @@ function hashPassword(rawPassword) {
 }
 
 async function generateSequentialId(table, column, prefix, padLength = 3) {
-  const sql = `SELECT ${column} AS id FROM ${table} ORDER BY ${column} DESC LIMIT 1`;
-  const rows = await query(sql);
-  if (!rows.length || !rows[0].id) {
-    return `${prefix}${String(1).padStart(padLength, "0")}`;
+  let retryCount = 0;
+  const maxRetries = 5;
+  
+  while (retryCount < maxRetries) {
+    try {
+      // Use transaction to ensure atomicity
+      const connection = mysql.createConnection({
+        host: process.env.DB_HOST || "localhost",
+        user: process.env.DB_USER || "root", 
+        password: process.env.DB_PASSWORD || "",
+        database: process.env.DB_NAME || "CarRentalDApp"
+      });
+
+      // Get the highest numeric part from existing IDs
+      const sql = `SELECT ${column} AS id FROM ${table} WHERE ${column} LIKE '${prefix}%' ORDER BY CAST(SUBSTRING(${column}, ${prefix.length + 1}) AS UNSIGNED) DESC LIMIT 1`;
+      console.log(`Generating ID for ${table}.${column}, query:`, sql);
+      
+      const rows = await query(sql);
+      console.log('Query result:', rows);
+      
+      let nextNum = 1;
+      if (rows.length > 0 && rows[0].id) {
+        const match = rows[0].id.match(/\d+$/);
+        if (match) {
+          nextNum = parseInt(match[0], 10) + 1;
+        }
+      }
+      
+      const newId = `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+      console.log(`Generated new ID: ${newId}`);
+      
+      // Double-check this ID doesn't exist
+      const checkSql = `SELECT COUNT(*) as count FROM ${table} WHERE ${column} = ?`;
+      const checkResult = await query(checkSql, [newId]);
+      
+      if (checkResult[0].count === 0) {
+        return newId;
+      } else {
+        console.log(`ID ${newId} already exists, retrying...`);
+        retryCount++;
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+    } catch (error) {
+      console.error(`Error generating sequential ID (attempt ${retryCount + 1}):`, error);
+      retryCount++;
+      
+      if (retryCount >= maxRetries) {
+        // Fallback: use timestamp-based ID
+        const timestamp = Date.now();
+        const fallbackId = `${prefix}${timestamp.toString().slice(-padLength)}`;
+        console.log(`Using fallback ID: ${fallbackId}`);
+        return fallbackId;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
   }
-  const match = rows[0].id.match(/\d+/);
-  const nextNum = match ? parseInt(match[0], 10) + 1 : 1;
-  return `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+  
+  // Final fallback with random number
+  const randomId = `${prefix}${Math.floor(Math.random() * 1000).toString().padStart(padLength, "0")}`;
+  console.log(`Using random fallback ID: ${randomId}`);
+  return randomId;
 }
 
 async function generateUserId() {
@@ -1659,6 +2076,7 @@ app.post("/api/rental/create", async (req, res) => {
     }
 
     const car = cars[0];
+    console.log('🚗 Car data with owner info:', JSON.stringify(car, null, 2));
     
     // Calculate amounts based on contract type
     let TotalPrice, rentAmountCPT, durationDays;
@@ -1732,39 +2150,245 @@ app.post("/api/rental/create", async (req, res) => {
       throw new Error('Failed to create blockchain agreement');
     }
 
-    // Generate contract ID
-    const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
-    
     // Prepare dates
     const startDateTime = startDate && startTime ? 
       new Date(`${startDate}T${startTime}:00`) : null;
     const endDateTime = (endDate && endTime && contractType === 'rental') ? 
       new Date(`${endDate}T${endTime}:00`) : null;
 
-    // Insert into database
-    const insertQuery = `
-      INSERT INTO Contracts (
-        ContractId, CarId, UserId, OwnerId, Type, 
-        StartDate, EndDate, Deposit, TotalPrice, 
-        Status, TXHash
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // Generate contract ID with retry logic
+    let contractId;
+    let insertSuccess = false;
+    let insertRetries = 0;
+    const maxInsertRetries = 3;
+    const contractStatus = 'Pending'; // Wait for signatures - Define here so it's accessible outside loop
     
-    const contractStatus = 'Pending'; // Wait for signatures
-    
-    await query(insertQuery, [
-      contractId,
-      carId,
-      userId,
-      car.OwnerId,
-      contractType === 'purchase' ? 'Buy' : 'Rent',
-      startDateTime ? startDateTime.toISOString().split('T')[0] : null, // Convert to date only
-      endDateTime ? endDateTime.toISOString().split('T')[0] : null,     // Convert to date only
-      deposit,
-      TotalPrice,
-      contractStatus,
-      blockchainResult.txHash
-    ]);
+    while (!insertSuccess && insertRetries < maxInsertRetries) {
+      try {
+        contractId = await generateSequentialId("Contracts", "ContractId", "CT");
+        console.log(`Attempting to create contract with ID: ${contractId} (retry ${insertRetries + 1})`);
+        
+        // Insert into database
+        const insertQuery = `
+          INSERT INTO Contracts (
+            ContractId, CarId, UserId, OwnerId, Type, 
+            StartDate, EndDate, Deposit, TotalPrice, 
+            Status, TXHash
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        await query(insertQuery, [
+          contractId,
+          carId,
+          userId,
+          car.OwnerId,
+          contractType === 'purchase' ? 'Buy' : 'Rent',
+          startDateTime ? startDateTime.toISOString().split('T')[0] : null, // Convert to date only
+          endDateTime ? endDateTime.toISOString().split('T')[0] : null,     // Convert to date only
+          deposit,
+          TotalPrice,
+          contractStatus,
+          blockchainResult.txHash
+        ]);
+        
+        console.log(`🔄 Contract inserted - CarOwnerId: ${car.OwnerId}`);
+        
+        insertSuccess = true;
+        console.log(`✅ Contract ${contractId} created successfully`);
+        
+      } catch (insertError) {
+        insertRetries++;
+        console.error(`❌ Failed to insert contract (attempt ${insertRetries}):`, insertError.message);
+        
+        if (insertError.code === 'ER_DUP_ENTRY') {
+          console.log('Duplicate entry detected, generating new ID...');
+          // Continue loop to try with new ID
+        } else {
+          // Other errors should not retry
+          throw insertError;
+        }
+        
+        if (insertRetries >= maxInsertRetries) {
+          throw new Error(`Failed to create contract after ${maxInsertRetries} attempts. Last error: ${insertError.message}`);
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // Automatically generate and upload contract PDF to IPFS
+    let pdfInfo = null;
+    try {
+      console.log(`Auto-generating contract PDF for ${contractId}...`);
+      
+      // Fetch complete contract data for PDF generation
+      const contractQuery = `
+        SELECT c.*, cars.CarName, cars.Brand, cars.ImageURL,
+               u_user.FullName as UserName, u_user.Email as UserEmail,
+               u_owner.FullName as OwnerName, u_owner.Email as OwnerEmail
+        FROM Contracts c
+        LEFT JOIN Cars cars ON c.CarId = cars.CarId
+        LEFT JOIN Users u_user ON c.UserId = u_user.UserId  
+        LEFT JOIN Users u_owner ON c.OwnerId = u_owner.UserId
+        WHERE c.ContractId = ?
+      `;
+      
+      const contractData = await query(contractQuery, [contractId]);
+      console.log('📋 Contract data for PDF:', JSON.stringify(contractData[0], null, 2));
+      
+      if (contractData.length > 0) {
+        const contract = contractData[0];
+        
+        // Debug owner information
+        console.log(`🔍 Owner info - OwnerId: ${contract.OwnerId}, OwnerName: ${contract.OwnerName}, OwnerEmail: ${contract.OwnerEmail}`);
+
+        // Generate PDF
+        const doc = new PDFDocument();
+        const pdfPath = `uploads/contract_${contractId}_${Date.now()}.pdf`;
+        doc.pipe(fs.createWriteStream(pdfPath));
+
+        // PDF Header
+        doc.fontSize(24).text('🚗 CAR RENTAL AGREEMENT', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(16).text('Smart Car Contract Platform', { align: 'center' });
+        doc.moveDown(2);
+
+        // Contract Details Section
+        doc.fontSize(18).fillColor('#2c3e50').text('CONTRACT DETAILS', 50, doc.y);
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#000');
+        
+        const leftColumn = 80;
+        const rightColumn = 320;
+        let yPos = doc.y;
+
+        doc.text('Contract ID:', leftColumn, yPos);
+        doc.text(contract.ContractId, rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Contract Type:', leftColumn, yPos);
+        doc.text(contract.Type, rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Status:', leftColumn, yPos);
+        doc.text(contract.Status, rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Start Date:', leftColumn, yPos);
+        doc.text(contract.StartDate ? contract.StartDate.toLocaleDateString() : 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('End Date:', leftColumn, yPos);
+        doc.text(contract.EndDate ? contract.EndDate.toLocaleDateString() : 'N/A', rightColumn, yPos);
+        yPos += 30;
+
+        // Car Information Section
+        doc.fontSize(18).fillColor('#2c3e50').text('VEHICLE INFORMATION', leftColumn, yPos);
+        yPos += 30;
+        doc.fontSize(12).fillColor('#000');
+
+        doc.text('Car Name:', leftColumn, yPos);
+        doc.text(contract.CarName || 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Brand:', leftColumn, yPos);
+        doc.text(contract.Brand || 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Car ID:', leftColumn, yPos);
+        doc.text(contract.CarId, rightColumn, yPos);
+        yPos += 30;
+
+        // Parties Information Section
+        doc.fontSize(18).fillColor('#2c3e50').text('PARTIES INFORMATION', leftColumn, yPos);
+        yPos += 30;
+        doc.fontSize(12).fillColor('#000');
+
+        doc.text('Renter Name:', leftColumn, yPos);
+        doc.text(contract.UserName || 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Renter Email:', leftColumn, yPos);
+        doc.text(contract.UserEmail || 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Owner Name:', leftColumn, yPos);
+        doc.text(contract.OwnerName || 'N/A', rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Owner Email:', leftColumn, yPos);
+        doc.text(contract.OwnerEmail || 'N/A', rightColumn, yPos);
+        yPos += 30;
+
+        // Financial Information Section
+        doc.fontSize(18).fillColor('#2c3e50').text('FINANCIAL DETAILS', leftColumn, yPos);
+        yPos += 30;
+        doc.fontSize(12).fillColor('#000');
+
+        doc.text('Deposit Amount:', leftColumn, yPos);
+        doc.text(`$${contract.Deposit}`, rightColumn, yPos);
+        yPos += 20;
+
+        doc.text('Total Price:', leftColumn, yPos);
+        doc.text(`$${contract.TotalPrice}`, rightColumn, yPos);
+        yPos += 30;
+
+        // Blockchain Information Section
+        doc.fontSize(18).fillColor('#2c3e50').text('BLOCKCHAIN INFORMATION', leftColumn, yPos);
+        yPos += 30;
+        doc.fontSize(12).fillColor('#000');
+
+        doc.text('Transaction Hash:', leftColumn, yPos);
+        doc.fontSize(10).text(contract.TXHash, rightColumn, yPos);
+        yPos += 20;
+
+        doc.fontSize(12).text('Agreement Address:', leftColumn, yPos);
+        doc.fontSize(10).text(blockchainResult.agreementAddress, rightColumn, yPos);
+        yPos += 30;
+
+        // Footer
+        doc.fontSize(12).fillColor('#000');
+        doc.text('Generated automatically by Smart Car Contract Platform', leftColumn, yPos);
+        yPos += 15;
+        doc.fontSize(10).fillColor('#666');
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, leftColumn, yPos);
+
+        doc.end();
+
+        // Wait for PDF generation to complete
+        await new Promise((resolve) => {
+          doc.on('end', resolve);
+        });
+
+        // Upload PDF to IPFS
+        const pinResult = await pinFileToIPFS(pdfPath, `contract_${contractId}.pdf`);
+        
+        if (pinResult && pinResult.IpfsHash && !pinResult.error) {
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinResult.IpfsHash}`;
+          pdfInfo = {
+            ipfsHash: pinResult.IpfsHash,
+            ipfsUrl: ipfsUrl,
+            success: true
+          };
+          
+          console.log(`✅ Contract PDF uploaded to IPFS: ${pinResult.IpfsHash}`);
+        } else {
+          console.log('❌ Failed to upload PDF to IPFS:', pinResult?.error || 'Unknown error');
+          pdfInfo = { success: false, error: 'Failed to upload to IPFS' };
+        }
+
+        // Clean up local PDF file
+        try {
+          fs.unlinkSync(pdfPath);
+        } catch (err) {
+          console.log('Warning: Could not delete temporary PDF file:', err.message);
+        }
+      }
+    } catch (pdfError) {
+      console.error('Error generating/uploading contract PDF:', pdfError);
+      pdfInfo = { success: false, error: pdfError.message };
+    }
 
     // Note: ContractEvents table will be handled later when payment system is implemented
     // await query(`
@@ -1772,7 +2396,9 @@ app.post("/api/rental/create", async (req, res) => {
     //   VALUES (?, ?, ?, ?, ?)
     // `, [contractId, 'ContractCreated', blockchainResult.txHash, userId, new Date()]);
 
-    // Return success response
+    console.log(`📤 Sending response for contract ${contractId}...`);
+
+    // Return success response with PDF info
     res.json({
       success: true,
       data: {
@@ -1782,9 +2408,12 @@ app.post("/api/rental/create", async (req, res) => {
         blockNumber: blockchainResult.blockNumber,
         gasUsed: blockchainResult.gasUsed,
         status: contractStatus,
-        message: 'Rental agreement created successfully on blockchain'
+        message: 'Rental agreement created successfully on blockchain',
+        pdfInfo: pdfInfo // Include PDF upload information
       }
     });
+
+    console.log(`✅ Response sent successfully for contract ${contractId}`);
 
   } catch (error) {
     console.error('Rental creation error:', error);
