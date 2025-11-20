@@ -58,34 +58,97 @@
     </main>
   </div>
 
-  <!-- Thay toàn bộ JS Firebase bằng đoạn này -->
-  <script>
-    const userId = localStorage.getItem("userId") || "U001"; // Thay bằng login thực tế sau
+  <!-- Load required scripts -->
+  <script src="../js/auth.js"></script>
+  <script src="../js/wallet-auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
 
+  <script>
     async function loadUserProfile() {
       try {
-        const response = await fetch(`http://localhost:3000/api/user/${userId}`);
+        // Check authentication first
+        if (!AuthManager.isLoggedIn()) {
+          alert('Please login to view profile');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        const user = AuthManager.getCurrentUser();
+        if (!user) {
+          alert('User session not found');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        console.log('Loading profile for user:', user);
+
+        // Get fresh user data from API
+        const response = await fetch(`http://localhost:3000/api/auth/me?userId=${user.UserId}`);
         const result = await response.json();
 
         if (result.success) {
-          const user = result.user;
-          document.getElementById("profileImage").src = user.PhotoURL || "https://i.pravatar.cc/120";
-          document.getElementById("topAvatar").src = user.PhotoURL || "https://i.pravatar.cc/40";
-          document.getElementById("fullName").value = user.FullName || "";
-          document.getElementById("role").value = user.Role || "";
-          document.getElementById("email").value = user.Email || "";
-          document.getElementById("wallet").value = user.WalletAddress || "";
+          const userData = result.user;
+          
+          // Update profile display
+          document.getElementById("profileImage").src = userData.AvatarURL || "https://i.pravatar.cc/120";
+          document.getElementById("topAvatar").src = userData.AvatarURL || "https://i.pravatar.cc/40";
+          document.getElementById("fullName").value = userData.FullName || "";
+          document.getElementById("role").value = userData.Role || "";
+          document.getElementById("email").value = userData.Email || "";
+          document.getElementById("wallet").value = userData.WalletAddress || "";
+
+          // Load wallet information if available
+          if (userData.WalletAddress) {
+            await loadWalletInfo(user.UserId, userData.WalletAddress);
+          }
         } else {
-          alert("Không tìm thấy người dùng!");
+          console.error('API Error:', result.error);
+          alert(`Error loading profile: ${result.error}`);
         }
       } catch (error) {
         console.error("Error loading profile:", error);
-        alert("Lỗi kết nối server!");
+        alert("Connection error! Please check if the server is running.");
       }
     }
 
-    // Gọi khi load trang
-    window.addEventListener("DOMContentLoaded", loadUserProfile);
+    async function loadWalletInfo(userId, walletAddress) {
+      try {
+        // Get wallet details
+        const walletResponse = await fetch(`http://localhost:3000/api/users/${userId}/wallet`);
+        const walletResult = await walletResponse.json();
+
+        if (walletResult.success && walletResult.wallet) {
+          console.log('Wallet info:', walletResult.wallet);
+          
+          // Show additional wallet info if needed
+          const walletInfo = document.createElement('div');
+          walletInfo.className = 'wallet-info';
+          walletInfo.innerHTML = `
+            <small>CPT Balance: ${walletResult.wallet.CPTBalance || 0} CPT</small>
+          `;
+          
+          const walletField = document.getElementById("wallet");
+          if (walletField.parentNode.querySelector('.wallet-info')) {
+            walletField.parentNode.querySelector('.wallet-info').remove();
+          }
+          walletField.parentNode.appendChild(walletInfo);
+        }
+      } catch (error) {
+        console.error('Error loading wallet info:', error);
+      }
+    }
+
+    // Initialize page
+    window.addEventListener("DOMContentLoaded", function() {
+      // Protect page access
+      AuthManager.protectPage(['User', 'Owner', 'Admin']);
+      
+      // Load profile
+      loadUserProfile();
+      
+      // Update header profile info
+      AuthManager.updateHeaderProfile();
+    });
 
     // Edit mode
     const editBtn = document.getElementById("editBtn");
@@ -93,7 +156,11 @@
     const inputs = document.querySelectorAll("#profileForm input");
 
     editBtn.addEventListener("click", () => {
-      inputs.forEach(input => input.removeAttribute("readonly"));
+      inputs.forEach(input => {
+        if (input.id !== 'role') { // Role should not be editable
+          input.removeAttribute("readonly");
+        }
+      });
       saveBtn.style.display = "block";
     });
 
@@ -101,15 +168,22 @@
     document.getElementById("profileForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const user = AuthManager.getCurrentUser();
+      if (!user) {
+        alert('Session expired. Please login again.');
+        window.location.href = 'login.html';
+        return;
+      }
+
       const updatedData = {
         fullName: document.getElementById("fullName").value,
-        role: document.getElementById("role").value,
         email: document.getElementById("email").value,
         walletAddress: document.getElementById("wallet").value
       };
 
       try {
-        const response = await fetch(`http://localhost:3000/api/user/${userId}`, {
+        // Update user profile (you'll need to implement this endpoint)
+        const response = await fetch(`http://localhost:3000/api/users/${user.UserId}/profile`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedData)
@@ -118,25 +192,35 @@
         const result = await response.json();
 
         if (result.success) {
-          alert("Cập nhật thành công!");
+          alert("Profile updated successfully!");
+          
+          // Update localStorage with new data
+          const updatedUser = { ...user, ...updatedData };
+          AuthManager.setSession(updatedUser);
+          
+          // Reset form to readonly
           inputs.forEach(input => input.setAttribute("readonly", true));
           saveBtn.style.display = "none";
+          
+          // Reload profile to get latest data
+          await loadUserProfile();
         } else {
-          alert("Lỗi: " + result.error);
+          alert("Error: " + result.error);
         }
       } catch (error) {
         console.error("Error updating:", error);
-        alert("Lỗi kết nối!");
+        alert("Connection error!");
       }
     });
 
-    // Preview ảnh
+    // Preview image
     window.previewImage = function (event) {
       const file = event.target.files[0];
       if (file) {
         const img = document.getElementById("profileImage");
         img.src = URL.createObjectURL(file);
-        // TODO: Upload ảnh lên server nếu cần
+        // TODO: Implement image upload to server
+        console.log('Image selected:', file.name);
       }
     };
   </script>

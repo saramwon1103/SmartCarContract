@@ -85,18 +85,67 @@ document.addEventListener('DOMContentLoaded', function() {
     async function connectMetaMask() {
         if (typeof window.ethereum !== 'undefined') {
             try {
+                // First request accounts
                 const accounts = await window.ethereum.request({ 
                     method: 'eth_requestAccounts' 
                 });
+                
+                // Check and switch to Hardhat network
+                await switchToHardhatNetwork();
+                
                 console.log('MetaMask connected:', accounts[0]);
                 updateConnectedState('MetaMask', accounts[0]);
                 closeModal();
             } catch (err) {
-                throw new Error('User rejected the request');
+                console.error('MetaMask connection error:', err);
+                throw new Error('Failed to connect: ' + err.message);
             }
         } else {
             window.open('https://metamask.io/', '_blank');
             throw new Error('MetaMask is not installed');
+        }
+    }
+
+    // Switch to Hardhat local network
+    async function switchToHardhatNetwork() {
+        const hardhatChainId = '0x7A69'; // 31337 in hex
+        
+        try {
+            // Try to switch to Hardhat network
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: hardhatChainId }]
+            });
+            
+            console.log('Switched to Hardhat network');
+        } catch (switchError) {
+            // If network doesn't exist, add it
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: hardhatChainId,
+                            chainName: 'Hardhat Local Network',
+                            rpcUrls: ['http://127.0.0.1:8545'],
+                            nativeCurrency: {
+                                name: 'ETH',
+                                symbol: 'ETH',
+                                decimals: 18
+                            },
+                            blockExplorerUrls: null
+                        }]
+                    });
+                    
+                    console.log('Added and switched to Hardhat network');
+                } catch (addError) {
+                    console.error('Failed to add Hardhat network:', addError);
+                    throw new Error('Please add Hardhat network (Chain ID: 31337, RPC: http://127.0.0.1:8545) manually in MetaMask');
+                }
+            } else {
+                console.error('Failed to switch network:', switchError);
+                throw new Error('Please switch to Hardhat network manually in MetaMask');
+            }
         }
     }
 
@@ -125,8 +174,95 @@ document.addEventListener('DOMContentLoaded', function() {
             connectWalletBtn.classList.add('connected');
         }
 
+        // Update wallet info display
+        const walletInfo = document.getElementById('walletInfo');
+        const walletBalance = document.getElementById('walletBalance');
+        const walletAddressElement = document.getElementById('walletAddress');
+
+        if (walletInfo && walletBalance && walletAddressElement) {
+            walletInfo.style.display = 'block';
+            walletAddressElement.textContent = address.substring(0, 6) + '...' + address.substring(address.length - 4);
+            
+            // Load both ETH and CPT balances
+            loadWalletBalances(address);
+        }
+
         // Show success message
         showNotification(`Successfully connected to ${walletName}!`, 'success');
+    }
+
+    // Load both ETH and CPT balance
+    async function loadWalletBalances(address) {
+        try {
+            console.log('Loading balances for address:', address);
+            
+            // Load ETH balance using ethers
+            if (typeof window.ethereum !== 'undefined') {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                
+                // Check network
+                const network = await provider.getNetwork();
+                console.log('Connected to network:', network.chainId, network.name);
+                
+                if (network.chainId !== 31337n) {
+                    console.warn('Not connected to Hardhat network (31337). Current:', network.chainId);
+                }
+                
+                const ethBalanceWei = await provider.getBalance(address);
+                const ethBalance = parseFloat(ethers.formatEther(ethBalanceWei));
+                
+                console.log('ETH Balance:', ethBalance, 'ETH');
+                
+                // Load CPT balance from API
+                try {
+                    const response = await fetch(`http://localhost:3000/api/wallet/cpt-balance/${address}`);
+                    const data = await response.json();
+                    
+                    console.log('CPT Balance API response:', data);
+                    
+                    const walletBalance = document.getElementById('walletBalance');
+                    if (walletBalance) {
+                        if (data.success) {
+                            const cptBalance = parseFloat(data.balance).toFixed(2);
+                            walletBalance.innerHTML = `
+                                <div style="font-size: 12px; line-height: 1.3;">
+                                    <div>${ethBalance.toFixed(4)} ETH</div>
+                                    <div>${cptBalance} CPT</div>
+                                </div>
+                            `;
+                        } else {
+                            walletBalance.innerHTML = `
+                                <div style="font-size: 12px; line-height: 1.3;">
+                                    <div>${ethBalance.toFixed(4)} ETH</div>
+                                    <div>0.00 CPT</div>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (apiError) {
+                    console.error('Error loading CPT balance from API:', apiError);
+                    const walletBalance = document.getElementById('walletBalance');
+                    if (walletBalance) {
+                        walletBalance.innerHTML = `
+                            <div style="font-size: 12px; line-height: 1.3;">
+                                <div>${ethBalance.toFixed(4)} ETH</div>
+                                <div>API Error</div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading wallet balances:', error);
+            const walletBalance = document.getElementById('walletBalance');
+            if (walletBalance) {
+                walletBalance.innerHTML = `
+                    <div style="font-size: 12px; color: red;">
+                        Error loading balance
+                    </div>
+                `;
+            }
+        }
     }
 
     // Check if wallet was previously connected
@@ -142,6 +278,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>${shortAddress}</span>
                 `;
                 connectWalletBtn.classList.add('connected');
+            }
+
+            // Update wallet info display
+            const walletInfo = document.getElementById('walletInfo');
+            const walletBalance = document.getElementById('walletBalance');
+            const walletAddressElement = document.getElementById('walletAddress');
+
+            if (walletInfo && walletBalance && walletAddressElement) {
+                walletInfo.style.display = 'block';
+                walletAddressElement.textContent = shortAddress;
+                
+                // Load both ETH and CPT balances  
+                loadWalletBalances(savedAddress);
             }
         }
     }

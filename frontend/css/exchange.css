@@ -1,0 +1,444 @@
+/* Exchange Page CSS */
+.exchange-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.exchange-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  margin-top: 50px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.exchange-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.exchange-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.exchange-subtitle {
+  color: #666;
+  font-size: 16px;
+}
+
+.wallet-status {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.wallet-status.disconnected {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #28a745;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.disconnected {
+  background: #dc3545;
+  animation: none;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.wallet-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wallet-address {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.chain-info {
+  font-size: 12px;
+  color: #666;
+}
+
+.connect-wallet-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-wallet-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+}
+
+.exchange-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.token-input-group {
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 20px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.token-input-group:focus-within {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  background: #ffffff;
+}
+
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.input-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.balance-display {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.balance-amount {
+  font-weight: 500;
+  color: #333;
+}
+
+.input-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  padding: 10px 0;
+}
+
+.amount-input::placeholder {
+  color: #ccc;
+}
+
+.max-button {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.max-button:hover {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.token-badge {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  min-width: 80px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+}
+
+.token-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.swap-divider {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: -10px 0;
+}
+
+.swap-button {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 18px;
+  color: #666;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.swap-button:hover {
+  background: #007bff;
+  color: white;
+  transform: rotate(180deg);
+  border-color: #007bff;
+}
+
+.exchange-info {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid rgba(0, 123, 255, 0.1);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+  font-weight: 600;
+  font-size: 16px;
+  padding-top: 15px;
+  border-top: 2px solid rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.info-label {
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.info-value {
+  color: #333;
+  font-weight: 500;
+}
+
+.exchange-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 15px;
+  padding: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.exchange-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.exchange-btn:hover::before {
+  left: 100%;
+}
+
+.exchange-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 123, 255, 0.3);
+}
+
+.exchange-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.transaction-status {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 12px;
+  display: none;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.transaction-status.success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.transaction-status.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.transaction-status.pending {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.transaction-hash {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 5px;
+}
+
+.price-impact {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.impact-badge {
+  background: #28a745;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.impact-badge.warning {
+  background: #ffc107;
+  color: #212529;
+}
+
+.impact-badge.danger {
+  background: #dc3545;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .exchange-container {
+    padding: 10px;
+  }
+  
+  .exchange-card {
+    margin-top: 20px;
+    padding: 20px;
+  }
+  
+  .exchange-title {
+    font-size: 24px;
+  }
+  
+  .amount-input {
+    font-size: 20px;
+  }
+  
+  .input-main {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .token-badge {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .exchange-card {
+    padding: 15px;
+    margin-top: 10px;
+  }
+  
+  .exchange-title {
+    font-size: 20px;
+  }
+  
+  .amount-input {
+    font-size: 18px;
+  }
+  
+  .wallet-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

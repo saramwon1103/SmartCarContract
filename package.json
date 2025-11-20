@@ -1,13 +1,20 @@
 {
   "name": "smartcarcontract",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "npx hardhat run scripts/deploy.js --network hardhat",
+    "deploy:ganache": "npx hardhat run scripts/deploy.js --network ganache",
+    "server": "node backend/server.js",
+    "dev": "concurrently \"npx hardhat node\" \"npm run server\"",
+    "compile": "npx hardhat compile",
+    "test-integration": "node test-integration.js"
   },
   "repository": {
     "type": "git",
@@ -16,7 +23,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/saramwon1103/SmartCarContract/issues"
   },
@@ -46,11 +52,14 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0",
     "axios": "^1.13.2",
+    "concurrently": "^7.6.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
     "express": "^5.1.0",
     "form-data": "^4.0.5",
     "multer": "^2.0.2",
     "mysql2": "^3.15.3",
+    "node-fetch": "^3.3.2",
     "pinata-web3": "^0.5.4",
     "puppeteer": "^24.30.0"
   }

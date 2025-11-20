@@ -2,18 +2,27 @@ import express from "express";
 import mysql from "mysql2";
 import cors from "cors";
 import crypto from "crypto";
+import dotenv from "dotenv";
+import { ethers } from "ethers";
+import BlockchainService from "./blockchain.js";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Support form data
 
+// Initialize blockchain service
+const blockchainService = new BlockchainService();
+
 // SỬA DÒNG NÀY: dùng createConnection + new
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "CarRentalDApp"
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "CarRentalDApp"
 });
   
 // Pin agreement metadata to IPFS via Pinata and optionally attach to Contracts row
@@ -588,7 +597,7 @@ app.get("/api/admin/dashboard/stats", async (req, res) => {
     
     // Calculate total revenue from completed contracts
     const [totalRevenueResult] = await query(`
-      SELECT SUM(TotalAmount) as revenue 
+      SELECT SUM(TotalPrice) as revenue 
       FROM Contracts 
       WHERE Status = 'Completed'
     `);
@@ -642,7 +651,7 @@ app.get("/api/admin/dashboard/recent-transactions", async (req, res) => {
         c.ContractId,
         cars.CarName,
         cars.Brand as carType,
-        c.TotalAmount as amount,
+        c.TotalPrice as amount,
         c.StartDate as date,
         cars.ImageURL
       FROM Contracts c
@@ -686,7 +695,7 @@ app.get("/api/admin/dashboard/rental-details", async (req, res) => {
         c.EndDate as dropoffDate,
         '09:00' as pickupTime,
         '18:00' as dropoffTime,
-        c.TotalAmount as totalPrice,
+        c.TotalPrice as totalPrice,
         u.FullName as renterName,
         c.Status
       FROM Contracts c
@@ -743,7 +752,7 @@ app.get("/api/admin/contracts", async (req, res) => {
         c.PickupLocation,
         c.DropoffLocation,
         c.Deposit,
-        c.TotalAmount,
+        c.TotalPrice,
         c.Status,
         c.TXHash,
         cars.CarName,
@@ -775,7 +784,7 @@ app.get("/api/admin/contracts", async (req, res) => {
         PickupLocation: contract.PickupLocation,
         DropoffLocation: contract.DropoffLocation,
         Deposit: parseFloat(contract.Deposit),
-        TotalAmount: parseFloat(contract.TotalAmount),
+        TotalPrice: parseFloat(contract.TotalPrice),
         Status: contract.Status,
         TXHash: contract.TXHash,
         CarName: contract.CarName,
@@ -830,7 +839,7 @@ app.get("/api/admin/contracts/:contractId", async (req, res) => {
       contract: {
         ...contract,
         Deposit: parseFloat(contract.Deposit),
-        TotalAmount: parseFloat(contract.TotalAmount),
+        TotalPrice: parseFloat(contract.TotalPrice),
         PriceRent: parseFloat(contract.PriceRent)
       }
     });
@@ -931,8 +940,8 @@ app.get("/api/admin/contracts/stats", async (req, res) => {
       query(`SELECT COUNT(*) as pending FROM Contracts WHERE Status = 'Pending'`),
       query(`SELECT COUNT(*) as completed FROM Contracts WHERE Status = 'Completed'`),
       query(`SELECT COUNT(*) as terminated FROM Contracts WHERE Status = 'Terminated'`),
-      query(`SELECT SUM(TotalAmount) as totalRevenue FROM Contracts WHERE Status = 'Completed'`),
-      query(`SELECT AVG(TotalAmount) as avgContractValue FROM Contracts WHERE Status IN ('Active', 'Completed')`)
+      query(`SELECT SUM(TotalPrice) as totalRevenue FROM Contracts WHERE Status = 'Completed'`),
+      query(`SELECT AVG(TotalPrice) as avgContractValue FROM Contracts WHERE Status IN ('Active', 'Completed')`)
     ];
     
     const [
@@ -979,7 +988,7 @@ app.get("/api/admin/contracts/search", async (req, res) => {
         c.PickupLocation,
         c.DropoffLocation,
         c.Deposit,
-        c.TotalAmount,
+        c.TotalPrice,
         c.Status,
         c.TXHash,
         cars.CarName,
@@ -1043,7 +1052,7 @@ app.get("/api/admin/contracts/search", async (req, res) => {
       contracts: contracts.map(contract => ({
         ...contract,
         Deposit: parseFloat(contract.Deposit),
-        TotalAmount: parseFloat(contract.TotalAmount)
+        TotalPrice: parseFloat(contract.TotalPrice)
       }))
     });
   } catch (error) {
@@ -1211,6 +1220,280 @@ app.post("/api/auth/logout", (req, res) => {
   });
 });
 
+// ==================== USER WALLET MANAGEMENT API ====================
+
+// Get user wallet info
+app.get("/api/users/:userId/wallet", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get user's wallet information
+    const wallets = await query(
+      `SELECT w.WalletId, w.WalletAddress, w.NetWork, w.LastConnected, u.FullName, u.Email
+       FROM Wallets w
+       LEFT JOIN Users u ON w.UserId = u.UserId 
+       WHERE w.UserId = ?
+       ORDER BY w.LastConnected DESC
+       LIMIT 1`,
+      [userId]
+    );
+    
+    if (wallets.length === 0) {
+      return res.json({ 
+        success: true, 
+        wallet: null,
+        message: "No wallet connected" 
+      });
+    }
+    
+    const wallet = wallets[0];
+    
+    // Get CPT balance if wallet exists
+    let cptBalance = 0;
+    if (wallet.WalletAddress) {
+      try {
+        const balance = await blockchainService.getCPTBalance(wallet.WalletAddress);
+        cptBalance = parseFloat(balance);
+      } catch (error) {
+        console.error('Error getting CPT balance:', error);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      wallet: {
+        ...wallet,
+        CPTBalance: cptBalance
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error getting user wallet:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Update or create user wallet
+app.put("/api/users/:userId/wallet", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { walletAddress, network } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: "Wallet address is required"
+      });
+    }
+    
+    // Validate wallet address format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid wallet address format"
+      });
+    }
+    
+    // Check if user exists
+    const users = await query(`SELECT UserId FROM Users WHERE UserId = ?`, [userId]);
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+    
+    // Update or create wallet
+    await upsertPrimaryWallet(userId, walletAddress, network || 'Hardhat');
+    
+    // Update Users table WalletAddress field for backward compatibility
+    await query(
+      `UPDATE Users SET WalletAddress = ? WHERE UserId = ?`,
+      [walletAddress, userId]
+    );
+    
+    // Get updated wallet info
+    const updatedWallet = await query(
+      `SELECT WalletId, WalletAddress, NetWork, LastConnected
+       FROM Wallets WHERE UserId = ? ORDER BY LastConnected DESC LIMIT 1`,
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      message: "Wallet updated successfully",
+      wallet: updatedWallet[0] || null
+    });
+    
+  } catch (error) {
+    console.error("Error updating user wallet:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Check wallet eligibility for rental
+app.get("/api/users/:userId/rental-eligibility", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get user info
+    const users = await query(
+      `SELECT UserId, FullName, Email, Role, WalletAddress FROM Users WHERE UserId = ?`,
+      [userId]
+    );
+    
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+    
+    const user = users[0];
+    const eligibility = {
+      eligible: false,
+      hasWallet: !!user.WalletAddress,
+      cptBalance: 0,
+      message: ""
+    };
+    
+    if (!eligibility.hasWallet) {
+      eligibility.message = "Please connect your wallet to rent a car";
+      return res.json({ success: true, eligibility });
+    }
+    
+    // Check CPT balance
+    try {
+      const balance = await blockchainService.getCPTBalance(user.WalletAddress);
+      eligibility.cptBalance = parseFloat(balance);
+      
+      if (eligibility.cptBalance > 0) {
+        eligibility.eligible = true;
+        eligibility.message = "Ready to rent! You can proceed with car rental.";
+      } else {
+        eligibility.message = "Wallet connected but no CPT balance. You may need to buy tokens.";
+      }
+    } catch (error) {
+      console.error('Error checking CPT balance:', error);
+      eligibility.message = "Unable to check wallet balance. Please try again.";
+    }
+    
+    res.json({ success: true, eligibility });
+    
+  } catch (error) {
+    console.error("Error checking rental eligibility:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Update user profile
+app.put("/api/users/:userId/profile", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { fullName, email, phone, walletAddress } = req.body;
+    
+    // Validate user exists
+    const users = await query(`SELECT UserId FROM Users WHERE UserId = ?`, [userId]);
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+    
+    // Prepare update fields
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (fullName) {
+      updateFields.push("FullName = ?");
+      updateValues.push(fullName);
+    }
+    
+    if (email) {
+      // Check if email is already taken by another user
+      const existingEmail = await query(
+        `SELECT UserId FROM Users WHERE Email = ? AND UserId != ?`, 
+        [email, userId]
+      );
+      if (existingEmail.length) {
+        return res.status(400).json({
+          success: false,
+          error: "Email is already taken"
+        });
+      }
+      updateFields.push("Email = ?");
+      updateValues.push(email);
+    }
+    
+    if (phone) {
+      updateFields.push("Phone = ?");
+      updateValues.push(phone);
+    }
+    
+    if (walletAddress) {
+      // Validate wallet address format
+      if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid wallet address format"
+        });
+      }
+      updateFields.push("WalletAddress = ?");
+      updateValues.push(walletAddress);
+    }
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No fields to update"
+      });
+    }
+    
+    // Add timestamp and userId
+    updateFields.push("UpdatedAt = NOW()");
+    updateValues.push(userId);
+    
+    // Execute update
+    const updateQuery = `UPDATE Users SET ${updateFields.join(", ")} WHERE UserId = ?`;
+    await query(updateQuery, updateValues);
+    
+    // If wallet address was updated, also update/create wallet record
+    if (walletAddress) {
+      await upsertPrimaryWallet(userId, walletAddress, 'Hardhat');
+    }
+    
+    // Return updated user data
+    const updatedUser = await query(
+      `SELECT UserId, FullName, Email, Role, Phone, WalletAddress, AvatarURL, CreatedAt, UpdatedAt 
+       FROM Users WHERE UserId = ?`,
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser[0]
+    });
+    
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // ==================== ONCHAIN CONTRACT API ENDPOINTS ====================
 
 // API để tạo hợp đồng onchain mới
@@ -1236,10 +1519,10 @@ app.post("/api/contracts/onchain/create", async (req, res) => {
     // generate ContractId similar to generateSequentialId()
     const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
 
-    const sql = `INSERT INTO Contracts (ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, Deposit, TotalAmount, Status, TXHash, ContractAddress)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO Contracts (ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, Deposit, TotalPrice, Status, TXHash)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const status = "Pending signature";
-    await query(sql, [contractId, carId, renterUserId, ownerUserId, type || "Rent", startDate || null, endDate || null, deposit || 0, totalPrice || 0, status, txHash, contractAddress]);
+    await query(sql, [contractId, carId, renterUserId, ownerUserId, type || "Rent", startDate || null, endDate || null, deposit || 0, totalPrice || 0, status, txHash]);
 
     res.json({ success: true, contractId, contractAddress, txHash });
   } catch (err) {
@@ -1263,7 +1546,7 @@ app.post("/api/contracts/onchain/signed", async (req, res) => {
     // Lưu một cột field để track (ví dụ thêm OwnerSigned, UserSigned) OR lưu activity
     // Nếu không muốn thêm cột, bạn có thể lưu vào một bảng `contract_events` hoặc update Status text.
     // Ví dụ cập nhật Status tạm thời:
-    await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, role === "owner" ? "OwnerSigned" : "UserSigned", txHash, signerUserId, new Date()]);
+    // await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, role === "owner" ? "OwnerSigned" : "UserSigned", txHash, signerUserId, new Date()]);
 
     res.json({ success: true, contractId });
   } catch (err) {
@@ -1288,7 +1571,7 @@ app.post("/api/contracts/onchain/created_event", async (req, res) => {
     const rows = await query(`SELECT ContractId FROM Contracts WHERE TXHash = ? LIMIT 1`, [txHash]);
     const contractId = rows.length ? rows[0].ContractId : null;
     if (contractId) {
-      await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementCreated', txHash, owner || null, new Date()]);
+      // await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementCreated', txHash, owner || null, new Date()]);
     }
 
     res.json({ success: true, contractAddress, txHash, contractId });
@@ -1321,13 +1604,436 @@ app.post("/api/contracts/onchain/activated", async (req, res) => {
     const rows = await query(`SELECT ContractId FROM Contracts WHERE ContractAddress = ? OR TXHash = ? LIMIT 1`, [contractAddress, txHash]);
     const contractId = rows.length ? rows[0].ContractId : null;
     if (contractId) {
-      await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementActivated', txHash || null, null, new Date()]);
+      // await query(`INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) VALUES (?, ?, ?, ?, ?)`, [contractId, 'AgreementActivated', txHash || null, null, new Date()]);
     }
 
     res.json({ success: true, contractId });
   } catch (err) {
     console.error("Error on activated callback:", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== RENTAL AGREEMENT CREATION API ====================
+
+// Create rental agreement endpoint
+app.post("/api/rental/create", async (req, res) => {
+  try {
+    const {
+      carId,
+      contractType, // 'rental' or 'purchase'
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      deposit,
+      rentalAmount,
+      walletAddress,
+      note
+    } = req.body;
+
+    console.log('Rental creation request:', req.body);
+
+    // Validate required fields
+    if (!carId || !contractType || !walletAddress || !deposit) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
+    // Get car information
+    const carQuery = `
+      SELECT c.*, u.UserId as OwnerId, u.WalletAddress as OwnerWallet
+      FROM Cars c 
+      LEFT JOIN Users u ON c.OwnerId = u.UserId 
+      WHERE c.CarId = ?
+    `;
+
+    const cars = await query(carQuery, [carId]);
+    if (!cars.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Car not found'
+      });
+    }
+
+    const car = cars[0];
+    
+    // Calculate amounts based on contract type
+    let TotalPrice, rentAmountCPT, durationDays;
+    
+    if (contractType === 'purchase') {
+      // For purchase: use PriceBuy as total
+      TotalPrice = parseFloat(car.PriceBuy);
+      rentAmountCPT = TotalPrice; // Full purchase amount
+      durationDays = 1; // Purchase is instant
+    } else {
+      // For rental: use PriceRent * duration
+      const pricePerDay = parseFloat(car.PriceRent);
+      
+      // Calculate rental duration in days
+      durationDays = 1; // Default 1 day
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        durationDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+      }
+      
+      rentAmountCPT = pricePerDay * durationDays; // Rental amount only
+      TotalPrice = rentAmountCPT + parseFloat(deposit); // Total = rental + deposit
+    }
+    
+    console.log(`Contract calculation: Type=${contractType}, Duration=${durationDays} days, RentAmount=${rentAmountCPT}, Deposit=${deposit}, Total=${TotalPrice}`);
+    
+    // Validate amounts
+    if (rentAmountCPT <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid rental amount calculated'
+      });
+    }
+    
+    // Get user info by wallet address
+    const userQuery = `SELECT UserId FROM Users WHERE WalletAddress = ?`;
+    const userResult = await query(userQuery, [walletAddress]);
+    
+    if (!userResult.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found with this wallet address'
+      });
+    }
+
+    const userId = userResult[0].UserId;
+    
+    // Use actual Hardhat owner address instead of fake one from database
+    const ownerWallet = car.OwnerWallet && ethers.isAddress(car.OwnerWallet) 
+      ? car.OwnerWallet 
+      : '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'; // Hardhat account #0
+    
+    console.log('Owner wallet resolved:', ownerWallet);
+
+    // Create blockchain transaction
+    const blockchainParams = {
+      userAddress: walletAddress,
+      ownerAddress: ownerWallet,
+      vehicleId: parseInt(carId.replace('C', '')), // Convert C001 -> 1
+      rentAmountCPT: rentAmountCPT,
+      depositAmountCPT: parseFloat(deposit),
+      carData: car
+    };
+
+    console.log('Creating blockchain agreement with params:', blockchainParams);
+
+    const blockchainResult = await blockchainService.createRentalAgreement(blockchainParams);
+
+    if (!blockchainResult.success) {
+      throw new Error('Failed to create blockchain agreement');
+    }
+
+    // Generate contract ID
+    const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
+    
+    // Prepare dates
+    const startDateTime = startDate && startTime ? 
+      new Date(`${startDate}T${startTime}:00`) : null;
+    const endDateTime = (endDate && endTime && contractType === 'rental') ? 
+      new Date(`${endDate}T${endTime}:00`) : null;
+
+    // Insert into database
+    const insertQuery = `
+      INSERT INTO Contracts (
+        ContractId, CarId, UserId, OwnerId, Type, 
+        StartDate, EndDate, Deposit, TotalPrice, 
+        Status, TXHash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const contractStatus = 'Pending'; // Wait for signatures
+    
+    await query(insertQuery, [
+      contractId,
+      carId,
+      userId,
+      car.OwnerId,
+      contractType === 'purchase' ? 'Buy' : 'Rent',
+      startDateTime ? startDateTime.toISOString().split('T')[0] : null, // Convert to date only
+      endDateTime ? endDateTime.toISOString().split('T')[0] : null,     // Convert to date only
+      deposit,
+      TotalPrice,
+      contractStatus,
+      blockchainResult.txHash
+    ]);
+
+    // Note: ContractEvents table will be handled later when payment system is implemented
+    // await query(`
+    //   INSERT INTO ContractEvents (ContractId, EventType, TxHash, UserId, CreatedAt) 
+    //   VALUES (?, ?, ?, ?, ?)
+    // `, [contractId, 'ContractCreated', blockchainResult.txHash, userId, new Date()]);
+
+    // Return success response
+    res.json({
+      success: true,
+      data: {
+        contractId,
+        agreementAddress: blockchainResult.agreementAddress,
+        txHash: blockchainResult.txHash,
+        blockNumber: blockchainResult.blockNumber,
+        gasUsed: blockchainResult.gasUsed,
+        status: contractStatus,
+        message: 'Rental agreement created successfully on blockchain'
+      }
+    });
+
+  } catch (error) {
+    console.error('Rental creation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Internal server error'
+    });
+  }
+});
+
+// Get CPT balance for a wallet
+app.get("/api/wallet/cpt-balance/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Wallet address is required'
+      });
+    }
+
+    const balance = await blockchainService.getCPTBalance(address);
+    
+    res.json({
+      success: true,
+      balance,
+      address
+    });
+    
+  } catch (error) {
+    console.error('CPT balance error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get agreement info from blockchain
+app.get("/api/contracts/agreement/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Agreement address is required'
+      });
+    }
+
+    const agreementInfo = await blockchainService.getAgreementInfo(address);
+    
+    res.json({
+      success: true,
+      agreement: agreementInfo
+    });
+    
+  } catch (error) {
+    console.error('Agreement info error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Simulate owner signature for testing
+app.post("/api/rental/sign-as-owner", async (req, res) => {
+  try {
+    const { contractAddress } = req.body;
+    
+    if (!contractAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract address is required'
+      });
+    }
+
+    console.log('Simulating owner signature for contract:', contractAddress);
+
+    // Use the blockchain service to sign as owner
+    const result = await blockchainService.signAgreementAsOwner(contractAddress);
+
+    res.json({
+      success: true,
+      txHash: result.txHash,
+      gasUsed: result.gasUsed,
+      blockNumber: result.blockNumber
+    });
+
+  } catch (error) {
+    console.error('Error simulating owner signature:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ===== PAYMENT ENDPOINTS =====
+
+// Get payment schedule for a contract
+app.get('/api/payment/schedule/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    const contract = await query(`
+      SELECT * FROM Contracts WHERE ContractId = ?
+    `, [contractId]);
+
+    if (!contract.length) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    const contractData = contract[0];
+
+    // Get payment history
+    const payments = await query(`
+      SELECT * FROM Payments 
+      WHERE ContractId = ? 
+      ORDER BY PaymentDate DESC
+    `, [contractId]);
+
+    // Calculate payment schedule
+    const paymentSchedule = [];
+    if (contractData.Status === 'Active' && contractData.Type === 'Rent') {
+      const intervalDays = contractData.PaymentIntervalDays || 30;
+      const startDate = new Date(contractData.StartDate);
+      const endDate = new Date(contractData.EndDate);
+      
+      let currentDate = new Date(startDate);
+      let paymentNumber = 1;
+      
+      while (currentDate <= endDate) {
+        const dueDate = new Date(currentDate);
+        dueDate.setDate(dueDate.getDate() + intervalDays);
+        
+        const isPaid = payments.some(p => 
+          Math.abs(new Date(p.PaymentDate) - dueDate) < 24 * 60 * 60 * 1000
+        );
+        
+        paymentSchedule.push({
+          paymentNumber,
+          dueDate: dueDate.toISOString(),
+          amount: contractData.TotalPrice - contractData.Deposit,
+          status: dueDate < new Date() ? (isPaid ? 'Paid' : 'Overdue') : 'Pending',
+          isPaid
+        });
+        
+        currentDate = dueDate;
+        paymentNumber++;
+      }
+    }
+
+    res.json({
+      success: true,
+      contract: contractData,
+      payments,
+      paymentSchedule
+    });
+
+  } catch (error) {
+    console.error('Error getting payment schedule:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Make periodic payment
+app.post('/api/payment/make/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { userAddress } = req.body;
+
+    const contract = await query(`
+      SELECT * FROM Contracts WHERE ContractId = ?
+    `, [contractId]);
+
+    if (!contract.length) {
+      return res.status(404).json({ success: false, error: 'Contract not found' });
+    }
+
+    const contractData = contract[0];
+
+    if (contractData.Status !== 'Active') {
+      return res.status(400).json({ success: false, error: 'Contract not active' });
+    }
+
+    // Call blockchain to make payment
+    const result = await blockchainService.makePayment(contractData.ContractAddress, userAddress);
+
+    // Record payment in database
+    const paymentId = await generateSequentialId("Payments", "PaymentId", "PAY");
+    
+    await query(`
+      INSERT INTO Payments (
+        PaymentId, ContractId, Amount, PaymentDate, TXHash, 
+        PaymentMethod, Status, CreatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      paymentId,
+      contractId,
+      contractData.TotalPrice - contractData.Deposit,
+      new Date(),
+      result.txHash,
+      'CPT',
+      'Completed',
+      new Date()
+    ]);
+
+    res.json({
+      success: true,
+      paymentId,
+      txHash: result.txHash,
+      gasUsed: result.gasUsed,
+      message: 'Payment completed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error making payment:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Check overdue payments
+app.get('/api/payment/overdue/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const overdueContracts = await query(`
+      SELECT c.*, 
+        DATEDIFF(NOW(), c.NextPaymentDue) as DaysOverdue
+      FROM Contracts c
+      WHERE c.UserId = ? 
+        AND c.Status = 'Active' 
+        AND c.Type = 'Rent'
+        AND c.NextPaymentDue < NOW()
+      ORDER BY DaysOverdue DESC
+    `, [userId]);
+
+    res.json({
+      success: true,
+      overdueContracts,
+      totalOverdue: overdueContracts.length
+    });
+
+  } catch (error) {
+    console.error('Error checking overdue payments:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

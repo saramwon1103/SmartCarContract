@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../css/header.css">
   <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.js"></script>
 </head>
 <body>
   <div class="dashboard-container">
@@ -22,10 +24,17 @@
           <span class="filter"><img src="../image/search.svg" alt="Search icon" class="icon"></span>
         </div>
         <div class="user-icons">
-          <button class="connect-wallet-btn" id="connectWalletBtn">
-            <i class="fa-solid fa-wallet"></i>
-            <span>Connect Wallet</span>
-          </button>
+          <!-- Wallet Status Display -->
+          <div class="wallet-status" id="walletStatus">
+            <div class="wallet-info" id="walletInfo" style="display: none;">
+              <span class="wallet-balance" id="walletBalance">0.00 CPT</span>
+              <span class="wallet-address" id="walletAddress">Not connected</span>
+            </div>
+            <button class="connect-wallet-btn" id="connectWalletBtn">
+              <i class="fa-solid fa-wallet"></i>
+              <span>Connect Wallet</span>
+            </button>
+          </div>
           <span><img src="../image/heart.svg" alt="Heart icon" class="icon"></span>
           <span><img src="../image/notification.svg" alt="Bell icon" class="icon"></span>
           <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
@@ -189,7 +198,7 @@
           <div class="pricing">
             <span class="current-price">${parseFloat(car.PriceRent || 0).toFixed(2)} CPT/<span class="day">day</span></span>
           </div>
-          <button class="rent-btn" onclick="event.stopPropagation()">Rent Now</button>
+          <button class="rent-btn" onclick="handleRentClick(event, '${car.CarId}')">Rent Now</button>
         </div>
       `;
 
@@ -204,5 +213,274 @@
     // Load khi trang sẵn sàng
     document.addEventListener('DOMContentLoaded', loadCars);
   </script>
+
+  <!-- Wallet Integration Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/wallet-auth.js"></script>
+  <script>
+    // Wallet Management for Home Page
+    class HomeWalletManager {
+      constructor() {
+        this.connectBtn = document.getElementById('connectWalletBtn');
+        this.walletInfo = document.getElementById('walletInfo');
+        this.walletBalance = document.getElementById('walletBalance');
+        this.walletAddress = document.getElementById('walletAddress');
+        
+        this.init();
+      }
+
+      async init() {
+        // Setup click handlers
+        this.connectBtn.addEventListener('click', () => this.handleWalletConnect());
+        
+        // Load user and wallet status
+        await this.loadUserWalletStatus();
+        
+        // Listen for MetaMask account changes
+        if (window.ethereum) {
+          window.ethereum.on('accountsChanged', () => this.handleAccountChange());
+        }
+      }
+
+      async loadUserWalletStatus() {
+        try {
+          if (!walletAuth.isLoggedIn()) {
+            this.showConnectButton('Please login first');
+            return;
+          }
+
+          const user = walletAuth.getCurrentUser();
+          const eligibility = await this.checkRentalEligibility(user.UserId);
+          
+          this.updateWalletDisplay(eligibility);
+        } catch (error) {
+          console.error('Error loading wallet status:', error);
+          this.showConnectButton('Error loading wallet');
+        }
+      }
+
+      async checkRentalEligibility(userId) {
+        try {
+          const response = await fetch(`http://localhost:3000/api/users/${userId}/rental-eligibility`);
+          const data = await response.json();
+          return data.success ? data.eligibility : null;
+        } catch (error) {
+          console.error('Error checking eligibility:', error);
+          return null;
+        }
+      }
+
+      updateWalletDisplay(eligibility) {
+        if (!eligibility) {
+          this.showConnectButton('Unable to check wallet status');
+          return;
+        }
+
+        if (eligibility.hasWallet) {
+          // Show wallet info
+          const user = walletAuth.getCurrentUser();
+          const shortAddress = user.WalletAddress ? 
+            `${user.WalletAddress.slice(0, 6)}...${user.WalletAddress.slice(-4)}` : 'Unknown';
+          
+          this.walletBalance.textContent = `${eligibility.cptBalance.toFixed(2)} CPT`;
+          this.walletAddress.textContent = shortAddress;
+          
+          this.walletInfo.style.display = 'block';
+          this.connectBtn.style.display = 'none';
+          
+          // Add status class based on eligibility
+          this.walletInfo.className = eligibility.eligible ? 'wallet-info connected' : 'wallet-info warning';
+        } else {
+          this.showConnectButton('Connect Wallet to Rent');
+        }
+      }
+
+      showConnectButton(text) {
+        this.connectBtn.style.display = 'block';
+        this.connectBtn.querySelector('span').textContent = text;
+        this.walletInfo.style.display = 'none';
+      }
+
+      async handleWalletConnect() {
+        try {
+          if (!walletAuth.isLoggedIn()) {
+            alert('Please login first to connect your wallet');
+            window.location.href = 'login.html';
+            return;
+          }
+
+          this.connectBtn.disabled = true;
+          this.connectBtn.querySelector('span').textContent = 'Connecting...';
+          
+          const result = await walletAuth.connectWallet();
+          
+          if (result.success) {
+            await this.loadUserWalletStatus();
+            
+            // Show success message
+            this.showNotification('Wallet connected successfully!', 'success');
+          } else {
+            throw new Error(result.error);
+          }
+        } catch (error) {
+          console.error('Wallet connection error:', error);
+          this.showNotification(`Failed to connect wallet: ${error.message}`, 'error');
+        } finally {
+          this.connectBtn.disabled = false;
+        }
+      }
+
+      async handleAccountChange() {
+        // Reload wallet status when MetaMask account changes
+        await this.loadUserWalletStatus();
+      }
+
+      showNotification(message, type) {
+        // Create simple notification
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 15px 20px;
+          border-radius: 8px;
+          color: white;
+          font-weight: 500;
+          z-index: 9999;
+          background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+    }
+
+    // Initialize wallet manager when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      new HomeWalletManager();
+    });
+
+    // Override rent button behavior to check wallet eligibility
+    window.handleRentClick = async function(event, carId) {
+      event.stopPropagation();
+      
+      if (!walletAuth.isLoggedIn()) {
+        alert('Please login to rent a car');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const user = walletAuth.getCurrentUser();
+      const eligibility = await fetch(`http://localhost:3000/api/users/${user.UserId}/rental-eligibility`)
+        .then(res => res.json())
+        .then(data => data.eligibility)
+        .catch(err => null);
+
+      if (!eligibility) {
+        alert('Unable to check rental eligibility. Please try again.');
+        return;
+      }
+
+      if (!eligibility.hasWallet) {
+        alert('Please connect your wallet first to rent a car');
+        return;
+      }
+
+      if (eligibility.cptBalance === 0) {
+        const proceed = confirm('You have no CPT balance. You will need to buy tokens to complete the rental. Continue?');
+        if (!proceed) return;
+      }
+
+      // Proceed to rental form
+      window.location.href = `rental_form.html?carId=${carId}`;
+    };
+  </script>
+
+  <!-- Wallet Styles -->
+  <style>
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wallet-info {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      min-width: 150px;
+    }
+
+    .wallet-info.connected {
+      background: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+
+    .wallet-info.warning {
+      background: #fff3cd;
+      border-color: #ffeaa7;
+      color: #856404;
+    }
+
+    .wallet-balance {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .wallet-address {
+      display: block;
+      color: #666;
+      font-size: 11px;
+    }
+
+    .connect-wallet-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.3s;
+    }
+
+    .connect-wallet-btn:hover {
+      background: #0056b3;
+    }
+
+    .connect-wallet-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .notification {
+      animation: slideInRight 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
 </body>
 </html>
