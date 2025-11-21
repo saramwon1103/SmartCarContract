@@ -153,7 +153,6 @@ class MyContractsManager {
                 <td>
                     <span class="status-badge ${contract.Status?.toLowerCase()}">${contract.Status || 'N/A'}</span>
                 </td>
-                <td class="table-price">$${parseFloat(contract.Deposit || 0).toFixed(2)}</td>
                 <td class="table-price">$${parseFloat(contract.TotalPrice || 0).toFixed(2)}</td>
                 <td>
                     <div class="table-actions">
@@ -251,10 +250,6 @@ class MyContractsManager {
         
         this.safeUpdateElement('detailCounterpartyEmail', (el) => {
             el.textContent = isOwner ? (contract.RenterEmail || 'N/A') : (contract.OwnerEmail || 'N/A');
-        });
-        
-        this.safeUpdateElement('detailDeposit', (el) => {
-            el.textContent = `$${parseFloat(contract.Deposit || 0).toFixed(2)}`;
         });
         
         this.safeUpdateElement('detailTotalPrice', (el) => {
