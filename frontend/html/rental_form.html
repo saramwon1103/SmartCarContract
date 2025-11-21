@@ -203,14 +203,34 @@
         </div>
       </div>
 
-      <div class="form-row">
+      <!-- Tùy chọn thanh toán cho mua xe -->
+      <div class="form-row" id="payment-options-row" style="display: none;">
         <div>
-          <label for="deposit">Deposit (CPT)</label>
-          <input type="number" id="deposit" readonly>
+          <label for="payment-type">Payment Type</label>
+          <select id="payment-type" required>
+            <option value="">-- Select Payment Type --</option>
+            <option value="full">Pay Full Amount</option>
+            <option value="quarterly">Pay by Quarter</option>
+          </select>
         </div>
         <div>
-          <label for="rental-amount">Rental Amount (CPT)</label>
+          <label for="quarters">Number of Quarters</label>
+          <select id="quarters" disabled>
+            <option value="4">4 Quarters (1 Year)</option>
+            <option value="8">8 Quarters (2 Years)</option>
+            <option value="12">12 Quarters (3 Years)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="rental-amount" id="amount-label">Rental Amount (CPT)</label>
           <input type="number" id="rental-amount" readonly>
+        </div>
+        <div id="payment-amount-container" style="display: none;">
+          <label for="payment-amount">Payment Amount (CPT)</label>
+          <input type="number" id="payment-amount" readonly>
         </div>
       </div>
 
@@ -417,11 +437,17 @@
       // Update form with car data
       document.getElementById('car-name').value = `${car.CarName || 'Unknown'} (${car.Brand || 'Unknown'})`;
 
-      const depositCPT = car.PriceBuy ? parseFloat(car.PriceBuy) * 0.1 : parseFloat(car.PriceRent || 50) * 0.2;
       const rentalAmountCPT = parseFloat(car.PriceRent || 50);
+      const purchasePriceCPT = parseFloat(car.PriceBuy || car.PriceRent * 20 || 1000);
 
-      document.getElementById('deposit').value = depositCPT.toFixed(2);
       document.getElementById('rental-amount').value = rentalAmountCPT.toFixed(2);
+      
+      // Store prices for later use
+      window.carPrices = {
+        rental: rentalAmountCPT,
+        purchase: purchasePriceCPT
+      };
+      
       updateCPTCalculations();
 
       // Set default dates
@@ -437,24 +463,92 @@
       const contractType = document.getElementById('contract-type');
       const endDate = document.getElementById('end-date');
       const endTime = document.getElementById('end-time');
+      const paymentOptionsRow = document.getElementById('payment-options-row');
+      const paymentType = document.getElementById('payment-type');
+      const quarters = document.getElementById('quarters');
+      const amountLabel = document.getElementById('amount-label');
+      const paymentAmountContainer = document.getElementById('payment-amount-container');
+      const rentalAmount = document.getElementById('rental-amount');
+      const paymentAmount = document.getElementById('payment-amount');
 
         const toggleEndFields = () => {
           if(contractType.value === 'purchase'){
+            // Disable date/time fields for purchase
             endDate.disabled = true;
             endTime.disabled = true;
             endDate.classList.add('disabled-input');
             endTime.classList.add('disabled-input');
             endDate.removeAttribute('required');
             endTime.removeAttribute('required');
+            
+            // Show payment options for purchase
+            paymentOptionsRow.style.display = 'flex';
+            paymentType.setAttribute('required', '');
+            amountLabel.textContent = 'Purchase Price (CPT)';
+            
+            // Update amount to purchase price
+            if (window.carPrices) {
+              rentalAmount.value = window.carPrices.purchase.toFixed(2);
+            }
           } else {
+            // Enable date/time fields for rental
             endDate.disabled = false;
             endTime.disabled = false;
             endDate.classList.remove('disabled-input');
             endTime.classList.remove('disabled-input');
             endDate.setAttribute('required','');
             endTime.setAttribute('required','');
+            
+            // Hide payment options for rental
+            paymentOptionsRow.style.display = 'none';
+            paymentType.removeAttribute('required');
+            paymentAmountContainer.style.display = 'none';
+            amountLabel.textContent = 'Rental Amount (CPT)';
+            
+            // Reset to rental price
+            if (window.carPrices) {
+              rentalAmount.value = window.carPrices.rental.toFixed(2);
+            }
           }
+          updateCPTCalculations();
         };
+        
+        // Payment type change handler
+        paymentType.addEventListener('change', function() {
+          if (contractType.value === 'purchase') {
+            if (this.value === 'quarterly') {
+              quarters.disabled = false;
+              paymentAmountContainer.style.display = 'block';
+              updateQuarterlyPayment();
+            } else if (this.value === 'full') {
+              quarters.disabled = true;
+              paymentAmountContainer.style.display = 'none';
+              if (window.carPrices) {
+                rentalAmount.value = window.carPrices.purchase.toFixed(2);
+              }
+            } else {
+              quarters.disabled = true;
+              paymentAmountContainer.style.display = 'none';
+            }
+            updateCPTCalculations();
+          }
+        });
+        
+        // Quarters change handler
+        quarters.addEventListener('change', function() {
+          if (contractType.value === 'purchase' && paymentType.value === 'quarterly') {
+            updateQuarterlyPayment();
+            updateCPTCalculations();
+          }
+        });
+        
+        function updateQuarterlyPayment() {
+          if (window.carPrices && quarters.value) {
+            const quarterlyAmount = window.carPrices.purchase / parseInt(quarters.value);
+            paymentAmount.value = quarterlyAmount.toFixed(2);
+            rentalAmount.value = quarterlyAmount.toFixed(2); // First payment
+          }
+        }
 
         contractType.addEventListener('change', toggleEndFields);
         toggleEndFields();
@@ -474,11 +568,20 @@
             endDate: document.getElementById('end-date').value,
             startTime: document.getElementById('start-time').value,
             endTime: document.getElementById('end-time').value,
-            deposit: document.getElementById('deposit').value,
             rentalAmount: document.getElementById('rental-amount').value,
             walletAddress: currentAccount,
             note: document.getElementById('note').value
           };
+          
+          // Add purchase-specific fields
+          if (formData.contractType === 'purchase') {
+            formData.paymentType = document.getElementById('payment-type').value;
+            if (formData.paymentType === 'quarterly') {
+              formData.quarters = document.getElementById('quarters').value;
+              formData.quarterlyAmount = document.getElementById('payment-amount').value;
+            }
+            formData.totalPurchasePrice = window.carPrices?.purchase || 0;
+          }
 
           if(formData.contractType === 'purchase'){
             formData.endDate = null;
@@ -486,7 +589,7 @@
           }
 
           // ✅ STEP 1: Check CPT Balance
-          const totalCPTNeeded = parseFloat(formData.deposit) + parseFloat(formData.rentalAmount);
+          const totalCPTNeeded = parseFloat(formData.rentalAmount);
           if(cptBalance < totalCPTNeeded){
             const buyMore = confirm(`❌ Insufficient CPT balance!
             
@@ -533,8 +636,8 @@ Would you like to buy more CPT tokens now?`);
           
           // Set basic car data
           document.getElementById('car-name').value = `Car #${carId}`;
-          document.getElementById('deposit').value = '50.00';
           document.getElementById('rental-amount').value = '30.00';
+          window.carPrices = { rental: 30, purchase: 600 };
           updateCPTCalculations();
 
           // Set default dates
@@ -758,9 +861,8 @@ You can now proceed with the rental agreement.`);
 
   async function buyTokens(){
     try{
-      const depositCPT = parseFloat(document.getElementById('deposit').value || 0);
       const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
-      const totalCPTNeeded = depositCPT + rentalCPT;
+      const totalCPTNeeded = rentalCPT;
       const cptToBuy = totalCPTNeeded - cptBalance;
       const ethRequired = cptToBuy * CPT_TOKEN_PRICE;
 
@@ -824,7 +926,16 @@ Transaction Hash: ${result.data.txHash}
 Agreement Address: ${result.data.agreementAddress}
 Gas Used: ${result.data.gasUsed}
 
-The contract has been deployed to the blockchain and is pending signatures.`);
+${result.data.pdf ? `📄 CONTRACT PDF CREATED:
+IPFS Hash: ${result.data.pdf.ipfsHash}
+PDF URL: ${result.data.pdf.pinataUrl}
+File Size: ${Math.round(result.data.pdf.size / 1024)} KB` : ''}
+
+${result.data.metadata ? `📋 METADATA STORED:
+IPFS Hash: ${result.data.metadata.ipfsHash}
+Metadata URL: ${result.data.metadata.pinataUrl}` : ''}
+
+The contract has been deployed to the blockchain and PDF stored on IPFS.`);
 
         console.log('Rental agreement created:', result.data);
         
@@ -872,7 +983,6 @@ The contract has been deployed to the blockchain and is pending signatures.`);
       );
 
       // Convert amounts to proper units (assuming 18 decimals)
-      const depositAmount = ethers.parseUnits(formData.deposit.toString(), 18);
       const rentalAmount = ethers.parseUnits(formData.rentalAmount.toString(), 18);
       const vehicleId = ethers.hashMessage(formData.carId); // Convert carId to bytes32
 
@@ -881,7 +991,7 @@ The contract has been deployed to the blockchain and is pending signatures.`);
         token: CONTRACT_ADDRESSES.CPT_TOKEN,
         vehicleId: vehicleId,
         rentAmount: rentalAmount.toString(),
-        depositAmount: depositAmount.toString()
+        depositAmount: '0'
       });
 
       // ✅ STEP 1: Estimate gas first
@@ -890,7 +1000,7 @@ The contract has been deployed to the blockchain and is pending signatures.`);
         CONTRACT_ADDRESSES.CPT_TOKEN,
         vehicleId,
         rentalAmount,
-        depositAmount
+        ethers.parseUnits('0', 18) // No deposit
       );
 
       console.log('Estimated gas:', gasEstimate.toString());
@@ -901,7 +1011,7 @@ The contract has been deployed to the blockchain and is pending signatures.`);
         CONTRACT_ADDRESSES.CPT_TOKEN,     // _token (CPT token address)
         vehicleId,                        // _vehicleId (car ID as bytes32)
         rentalAmount,                     // _rentAmount
-        depositAmount,                    // _depositAmount
+        ethers.parseUnits('0', 18),       // _depositAmount (no deposit)
         {
           gasLimit: gasEstimate * 120n / 100n // 20% buffer
         }
@@ -939,7 +1049,7 @@ Please wait for confirmation...`);
         }
       }
 
-      alert(`🎉 Rental agreement created successfully!
+      let alertMessage = `🎉 ${formData.contractType === 'purchase' ? 'Purchase' : 'Rental'} agreement created successfully!
 
 ✅ Contract deployed to blockchain!
 📍 Agreement Address: ${agreementAddress}
@@ -947,10 +1057,32 @@ Please wait for confirmation...`);
 ⛽ Gas Used: ${receipt.gasUsed.toString()}
 📦 Block Number: ${receipt.blockNumber}
 
-💰 ${formData.deposit} CPT deposit locked
-💰 ${formData.rentalAmount} CPT rental fee locked
+💰 ${formData.rentalAmount} CPT ${formData.contractType === 'purchase' ? 'payment' : 'rental fee'} locked`;
+      
+      if (formData.contractType === 'purchase') {
+        if (formData.paymentType === 'quarterly') {
+          alertMessage += `
 
-The smart contract is now active on the blockchain!`);
+📋 PAYMENT PLAN DETAILS:
+🔢 Total Price: ${formData.totalPurchasePrice} CPT
+📅 Payment Terms: ${formData.quarters} quarters (${formData.quarters * 3} months)
+💰 Amount per Quarter: ${formData.quarterlyAmount} CPT
+✅ First Payment: ${formData.quarterlyAmount} CPT (Completed)
+⏳ Next Payments: ${formData.quarters - 1} remaining payments
+
+⚠️  IMPORTANT: You need to make quarterly payments manually. 
+    Contract status will be 'Active' until all payments completed.`;
+        } else {
+          alertMessage += `
+💰 Full Purchase Price: ${formData.totalPurchasePrice} CPT (Paid in full)`;
+        }
+      }
+      
+      alertMessage += `
+
+The smart contract is now active on the blockchain!`;
+      
+      alert(alertMessage);
 
       // ✅ STEP 5: Store contract info in database via API
       try {
@@ -963,13 +1095,16 @@ The smart contract is now active on the blockchain!`);
             carId: formData.carId,
             userId: localStorage.getItem('userId'),
             walletAddress: currentAccount,
-            depositAmount: formData.deposit,
             rentalAmount: formData.rentalAmount,
             contractType: formData.contractType,
             startDate: formData.startDate,
             endDate: formData.endDate,
             blockNumber: receipt.blockNumber,
-            gasUsed: receipt.gasUsed.toString()
+            gasUsed: receipt.gasUsed.toString(),
+            // Lưu payment info vào note để tham khảo
+            note: formData.contractType === 'purchase' && formData.paymentType === 'quarterly' 
+              ? `Quarterly payment: ${formData.quarters} quarters, ${formData.quarterlyAmount} CPT per quarter, Total: ${formData.totalPurchasePrice} CPT`
+              : (formData.note || '')
           })
         });
       } catch (dbError) {
@@ -990,9 +1125,8 @@ The smart contract is now active on the blockchain!`);
   }
 
   function updateCPTCalculations(){
-    const depositCPT = parseFloat(document.getElementById('deposit').value || 0);
     const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
-    const totalCPT = depositCPT + rentalCPT;
+    const totalCPT = rentalCPT;
     const totalETH = totalCPT * CPT_TOKEN_PRICE;
 
     document.getElementById('total-cpt-needed').textContent = totalCPT.toFixed(2);

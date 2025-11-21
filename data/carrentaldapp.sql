@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 21, 2025 lúc 03:13 PM
+-- Thời gian đã tạo: Th10 21, 2025 lúc 04:38 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -103,7 +103,6 @@ CREATE TABLE `contracts` (
   `Type` varchar(50) DEFAULT NULL,
   `StartDate` date DEFAULT NULL,
   `EndDate` date DEFAULT NULL,
-  `Deposit` decimal(18,2) DEFAULT NULL,
   `TotalPrice` decimal(18,2) DEFAULT NULL,
   `Status` varchar(100) DEFAULT NULL,
   `TXHash` varchar(255) DEFAULT NULL
@@ -113,23 +112,23 @@ CREATE TABLE `contracts` (
 -- Đang đổ dữ liệu cho bảng `contracts`
 --
 
-INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `Deposit`, `TotalPrice`, `Status`, `TXHash`) VALUES
-('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', 45.00, 75.00, 'Completed', '0xabc001'),
-('CT016', 'C001', 'U036', 'U001', 'Rent', '2025-11-21', '2025-11-22', 35.00, 50.00, 'Pending', '0x12c4d59c2bfcce1bba9a05df4220002a7e7c708720736338a5973276fbd74eb3'),
-('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', 36.00, 54.00, 'Pending', '0xabc002'),
-('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', 60.00, 100.00, 'Completed', '0xabc003'),
-('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', 285.00, 950.00, 'Completed', '0xabc004'),
-('CT05', 'C005', 'U025', 'U005', 'Buy', '2025-10-12', '2025-10-12', 360.00, 1200.00, 'Pending', '0xabc005'),
-('CT06', 'C006', 'U026', 'U006', 'Rent', '2025-11-10', '2025-11-15', 90.00, 150.00, 'Active', '0xabc006'),
-('CT07', 'C007', 'U027', 'U007', 'Rent', '2025-11-05', '2025-11-07', 99.00, 165.00, 'Completed', '0xabc007'),
-('CT08', 'C008', 'U028', 'U008', 'Rent', '2025-11-12', '2025-11-16', 84.00, 140.00, 'Active', '0xabc008'),
-('CT09', 'C020', 'U029', 'U020', 'Rent', '2025-11-15', '2025-11-18', 192.00, 320.00, 'Active', '0xabc009'),
-('CT10', 'C014', 'U030', 'U014', 'Buy', '2025-11-01', '2025-11-01', 405.00, 1350.00, 'Completed', '0xabc010'),
-('CT11', 'C009', 'U021', 'U009', 'Rent', '2025-11-17', '2025-11-20', 53.00, 88.00, 'Active', '0xabc011'),
-('CT12', 'C012', 'U022', 'U012', 'Rent', '2025-11-18', '2025-11-22', 42.00, 70.00, 'Active', '0xabc012'),
-('CT13', 'C015', 'U023', 'U015', 'Rent', '2025-11-16', '2025-11-23', 252.00, 420.00, 'Active', '0xabc013'),
-('CT14', 'C018', 'U024', 'U018', 'Rent', '2025-11-20', '2025-11-25', 150.00, 250.00, 'Pending', '0xabc014'),
-('CT15', 'C013', 'U025', 'U013', 'Buy', '2025-11-15', '2025-11-15', 204.00, 680.00, 'Completed', '0xabc015');
+INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `TotalPrice`, `Status`, `TXHash`) VALUES
+('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', 75.00, 'Completed', '0xabc001'),
+('CT016', 'C001', 'U036', 'U001', 'Rent', '2025-11-21', '2025-11-22', 50.00, 'Pending', '0x12c4d59c2bfcce1bba9a05df4220002a7e7c708720736338a5973276fbd74eb3'),
+('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', 54.00, 'Pending', '0xabc002'),
+('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', 100.00, 'Completed', '0xabc003'),
+('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', 950.00, 'Completed', '0xabc004'),
+('CT05', 'C005', 'U025', 'U005', 'Buy', '2025-10-12', '2025-10-12', 1200.00, 'Pending', '0xabc005'),
+('CT06', 'C006', 'U026', 'U006', 'Rent', '2025-11-10', '2025-11-15', 150.00, 'Active', '0xabc006'),
+('CT07', 'C007', 'U027', 'U007', 'Rent', '2025-11-05', '2025-11-07', 165.00, 'Completed', '0xabc007'),
+('CT08', 'C008', 'U028', 'U008', 'Rent', '2025-11-12', '2025-11-16', 140.00, 'Active', '0xabc008'),
+('CT09', 'C020', 'U029', 'U020', 'Rent', '2025-11-15', '2025-11-18', 320.00, 'Active', '0xabc009'),
+('CT10', 'C014', 'U030', 'U014', 'Buy', '2025-11-01', '2025-11-01', 1350.00, 'Completed', '0xabc010'),
+('CT11', 'C009', 'U021', 'U009', 'Rent', '2025-11-17', '2025-11-20', 88.00, 'Active', '0xabc011'),
+('CT12', 'C012', 'U022', 'U012', 'Rent', '2025-11-18', '2025-11-22', 70.00, 'Active', '0xabc012'),
+('CT13', 'C015', 'U023', 'U015', 'Rent', '2025-11-16', '2025-11-23', 420.00, 'Active', '0xabc013'),
+('CT14', 'C018', 'U024', 'U018', 'Rent', '2025-11-20', '2025-11-25', 250.00, 'Pending', '0xabc014'),
+('CT15', 'C013', 'U025', 'U013', 'Buy', '2025-11-15', '2025-11-15', 680.00, 'Completed', '0xabc015');
 
 -- --------------------------------------------------------
 
@@ -212,7 +211,8 @@ INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddre
 ('U030', 'Đinh Văn Quang', 'quang.dinh@gmail.com', 'hash30', '0x890BCD...', NULL, 'User', '2025-11-16 14:30:00'),
 ('U035', 'Car Renter', 'user@test.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', NULL, 'User', '2025-11-20 12:09:34'),
 ('U036', 'Quyên Lê', 'quyen8a2113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 12:57:21'),
-('U037', 'Quyên Lê', 'saramwon113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 13:21:38');
+('U037', 'Quyên Lê', 'saramwon113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 13:21:38'),
+('U038', 'Quyên Lê Nguyễn Diễm', '22521228@gm.uit.edu.vn', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'Owner', '2025-11-21 21:50:10');
 
 -- --------------------------------------------------------
 
@@ -259,7 +259,8 @@ INSERT INTO `wallets` (`WalletId`, `UserId`, `WalletAddress`, `NetWork`, `LastCo
 ('W034', 'U035', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', 'Hardhat', '2025-11-20 12:09:34'),
 ('W035', 'U031', '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', 'Hardhat', '2025-11-20 12:11:55'),
 ('W036', 'U036', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-20 13:54:47'),
-('W037', 'U037', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-20 13:21:48');
+('W037', 'U037', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-20 13:21:48'),
+('W038', 'U038', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-21 21:58:24');
 
 --
 -- Chỉ mục cho các bảng đã đổ

@@ -5,6 +5,8 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import BlockchainService from "./blockchain.js";
+import { ContractPDFGenerator } from "./contractPDF.js";
+import { PinataService } from "./pinataService.js";
 
 // Load environment variables
 dotenv.config();
@@ -16,6 +18,8 @@ app.use(express.urlencoded({ extended: true })); // Support form data
 
 // Initialize blockchain service
 const blockchainService = new BlockchainService();
+const pdfGenerator = new ContractPDFGenerator();
+const pinataService = new PinataService();
 
 // SỬA DÒNG NÀY: dùng createConnection + new
 const db = mysql.createConnection({
@@ -89,12 +93,43 @@ function hashPassword(rawPassword) {
 async function generateSequentialId(table, column, prefix, padLength = 3) {
   const sql = `SELECT ${column} AS id FROM ${table} ORDER BY ${column} DESC LIMIT 1`;
   const rows = await query(sql);
-  if (!rows.length || !rows[0].id) {
-    return `${prefix}${String(1).padStart(padLength, "0")}`;
+  
+  let nextNum = 1;
+  
+  if (rows.length && rows[0].id) {
+    // Extract number from existing ID (e.g., "CT016" -> 16)
+    const match = rows[0].id.match(/(\d+)$/);
+    if (match) {
+      nextNum = parseInt(match[1], 10) + 1;
+    }
   }
-  const match = rows[0].id.match(/\d+/);
-  const nextNum = match ? parseInt(match[0], 10) + 1 : 1;
-  return `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+  
+  // Generate new ID with padding
+  let newId;
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  do {
+    newId = `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+    
+    // Check if this ID already exists
+    const existingRows = await query(`SELECT ${column} FROM ${table} WHERE ${column} = ? LIMIT 1`, [newId]);
+    
+    if (existingRows.length === 0) {
+      break; // ID is unique, we can use it
+    }
+    
+    nextNum++;
+    attempts++;
+    
+  } while (attempts < maxAttempts);
+  
+  if (attempts >= maxAttempts) {
+    throw new Error(`Could not generate unique ID after ${maxAttempts} attempts`);
+  }
+  
+  console.log(`Generated unique ID: ${newId} (after ${attempts} attempts)`);
+  return newId;
 }
 
 async function generateUserId() {
@@ -1626,8 +1661,11 @@ app.post("/api/rental/create", async (req, res) => {
       endDate,
       startTime,
       endTime,
-      deposit,
       rentalAmount,
+      paymentType,     // 'full' or 'quarterly' for purchase
+      quarters,        // number of quarters for quarterly payment
+      quarterlyAmount, // amount per quarter
+      totalPurchasePrice, // total purchase price
       walletAddress,
       note
     } = req.body;
@@ -1635,7 +1673,7 @@ app.post("/api/rental/create", async (req, res) => {
     console.log('Rental creation request:', req.body);
 
     // Validate required fields
-    if (!carId || !contractType || !walletAddress || !deposit) {
+    if (!carId || !contractType || !walletAddress || !rentalAmount) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
@@ -1664,10 +1702,18 @@ app.post("/api/rental/create", async (req, res) => {
     let TotalPrice, rentAmountCPT, durationDays;
     
     if (contractType === 'purchase') {
-      // For purchase: use PriceBuy as total
-      TotalPrice = parseFloat(car.PriceBuy);
-      rentAmountCPT = TotalPrice; // Full purchase amount
-      durationDays = 1; // Purchase is instant
+      // For purchase: handle different payment types
+      if (paymentType === 'quarterly' && quarters && quarterlyAmount) {
+        // Quarterly payment
+        TotalPrice = parseFloat(totalPurchasePrice) || parseFloat(car.PriceBuy);
+        rentAmountCPT = parseFloat(quarterlyAmount); // First payment amount
+        durationDays = parseInt(quarters) * 90; // quarters * 90 days
+      } else {
+        // Full payment
+        TotalPrice = parseFloat(totalPurchasePrice) || parseFloat(car.PriceBuy);
+        rentAmountCPT = TotalPrice; // Full purchase amount
+        durationDays = 1; // Purchase is instant
+      }
     } else {
       // For rental: use PriceRent * duration
       const pricePerDay = parseFloat(car.PriceRent);
@@ -1680,11 +1726,14 @@ app.post("/api/rental/create", async (req, res) => {
         durationDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
       }
       
-      rentAmountCPT = pricePerDay * durationDays; // Rental amount only
-      TotalPrice = rentAmountCPT + parseFloat(deposit); // Total = rental + deposit
+      rentAmountCPT = parseFloat(rentalAmount) || (pricePerDay * durationDays);
+      TotalPrice = rentAmountCPT; // No deposit for rental anymore
     }
     
-    console.log(`Contract calculation: Type=${contractType}, Duration=${durationDays} days, RentAmount=${rentAmountCPT}, Deposit=${deposit}, Total=${TotalPrice}`);
+    console.log(`Contract calculation: Type=${contractType}, Duration=${durationDays} days, RentAmount=${rentAmountCPT}, Total=${TotalPrice}`);
+    if (contractType === 'purchase') {
+      console.log(`Payment type: ${paymentType}, Quarters: ${quarters}, QuarterlyAmount: ${quarterlyAmount}`);
+    }
     
     // Validate amounts
     if (rentAmountCPT <= 0) {
@@ -1720,8 +1769,12 @@ app.post("/api/rental/create", async (req, res) => {
       ownerAddress: ownerWallet,
       vehicleId: parseInt(carId.replace('C', '')), // Convert C001 -> 1
       rentAmountCPT: rentAmountCPT,
-      depositAmountCPT: parseFloat(deposit),
-      carData: car
+      depositAmountCPT: 0, // No deposit anymore
+      carData: car,
+      paymentType: paymentType,
+      quarters: quarters,
+      quarterlyAmount: quarterlyAmount,
+      totalPurchasePrice: totalPurchasePrice
     };
 
     console.log('Creating blockchain agreement with params:', blockchainParams);
@@ -1732,39 +1785,175 @@ app.post("/api/rental/create", async (req, res) => {
       throw new Error('Failed to create blockchain agreement');
     }
 
-    // Generate contract ID
-    const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
-    
     // Prepare dates
     const startDateTime = startDate && startTime ? 
       new Date(`${startDate}T${startTime}:00`) : null;
     const endDateTime = (endDate && endTime && contractType === 'rental') ? 
       new Date(`${endDate}T${endTime}:00`) : null;
 
-    // Insert into database
-    const insertQuery = `
-      INSERT INTO Contracts (
-        ContractId, CarId, UserId, OwnerId, Type, 
-        StartDate, EndDate, Deposit, TotalPrice, 
-        Status, TXHash
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    const contractStatus = 'Pending'; // Wait for signatures
-    
-    await query(insertQuery, [
-      contractId,
-      carId,
-      userId,
-      car.OwnerId,
-      contractType === 'purchase' ? 'Buy' : 'Rent',
-      startDateTime ? startDateTime.toISOString().split('T')[0] : null, // Convert to date only
-      endDateTime ? endDateTime.toISOString().split('T')[0] : null,     // Convert to date only
-      deposit,
-      TotalPrice,
-      contractStatus,
-      blockchainResult.txHash
-    ]);
+    // Generate contract ID with retry mechanism
+    let contractId;
+    let insertSuccess = false;
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    while (!insertSuccess && retryCount < maxRetries) {
+      try {
+        contractId = await generateSequentialId("Contracts", "ContractId", "CT");
+        
+        // Insert into database (chỉ sử dụng cột có sẵn)
+        const insertQuery = `
+          INSERT INTO Contracts (
+            ContractId, CarId, UserId, OwnerId, Type, 
+            StartDate, EndDate, TotalPrice, 
+            Status, TXHash
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        const contractStatus = contractType === 'purchase' && paymentType === 'quarterly' ? 'Active' : 'Pending';
+        
+        await query(insertQuery, [
+          contractId,
+          carId,
+          userId,
+          car.OwnerId,
+          contractType === 'purchase' ? 'Buy' : 'Rent',
+          startDateTime ? startDateTime.toISOString().split('T')[0] : null,
+          endDateTime ? endDateTime.toISOString().split('T')[0] : null,
+          TotalPrice,
+          contractStatus,
+          blockchainResult.txHash
+        ]);
+        
+        insertSuccess = true;
+        console.log(`Contract ${contractId} inserted successfully`);
+        
+      } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+          retryCount++;
+          console.log(`Duplicate key error for ${contractId}, retrying... (${retryCount}/${maxRetries})`);
+          
+          if (retryCount >= maxRetries) {
+            throw new Error(`Failed to insert contract after ${maxRetries} attempts due to duplicate key`);
+          }
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
+    }
+
+    // Lưu thông tin payment vào note nếu là quarterly payment
+    if (contractType === 'purchase' && paymentType === 'quarterly' && quarters && quarterlyAmount) {
+      const paymentNote = JSON.stringify({
+        paymentType: paymentType,
+        quarters: quarters,
+        quarterlyAmount: quarterlyAmount,
+        totalPurchasePrice: totalPurchasePrice,
+        startDate: startDateTime ? startDateTime.toISOString() : null
+      });
+      
+      console.log(`Quarterly payment info saved for contract ${contractId}:`, paymentNote);
+    }
+
+    // ===== TẠO PDF CONTRACT VÀ UPLOAD LÊN PINATA =====
+    let pdfInfo = null;
+    let metadataInfo = null;
+
+    try {
+      console.log('Generating contract PDF...');
+      
+      // Chuẩn bị dữ liệu cho PDF
+      const contractPDFData = {
+        contractId: contractId,
+        contractType: contractType,
+        contractAddress: blockchainResult.agreementAddress,
+        txHash: blockchainResult.txHash,
+        carId: carId,
+        carName: car.CarName,
+        carBrand: car.Brand,
+        carDescription: car.Description,
+        totalPrice: TotalPrice,
+        rentalAmount: rentAmountCPT,
+        startDate: startDate,
+        endDate: endDate,
+        paymentType: paymentType,
+        quarters: quarters,
+        quarterlyAmount: quarterlyAmount,
+        totalPurchasePrice: totalPurchasePrice,
+        userWallet: walletAddress,
+        ownerWallet: ownerWallet,
+        createdAt: new Date().toISOString()
+      };
+
+      // Tạo PDF
+      const pdfResult = await pdfGenerator.generateContract(contractPDFData);
+      console.log('PDF generated:', pdfResult);
+
+      // Upload PDF lên Pinata
+      pdfInfo = await pinataService.uploadContractPDF(pdfResult.filePath, {
+        contractId: contractId,
+        contractType: contractType,
+        carId: carId,
+        contractAddress: blockchainResult.agreementAddress,
+        txHash: blockchainResult.txHash
+      });
+
+      // Upload metadata lên Pinata
+      const contractMetadata = {
+        contractId: contractId,
+        contractType: contractType,
+        carInfo: {
+          carId: carId,
+          carName: car.CarName,
+          brand: car.Brand,
+          description: car.Description
+        },
+        blockchain: {
+          contractAddress: blockchainResult.agreementAddress,
+          txHash: blockchainResult.txHash,
+          blockNumber: blockchainResult.blockNumber,
+          gasUsed: blockchainResult.gasUsed
+        },
+        payment: {
+          totalPrice: TotalPrice,
+          rentalAmount: rentAmountCPT,
+          paymentType: paymentType,
+          quarters: quarters,
+          quarterlyAmount: quarterlyAmount,
+          totalPurchasePrice: totalPurchasePrice
+        },
+        parties: {
+          userWallet: walletAddress,
+          ownerWallet: ownerWallet,
+          userId: userId,
+          ownerId: car.OwnerId
+        },
+        dates: {
+          startDate: startDate,
+          endDate: endDate,
+          createdAt: new Date().toISOString()
+        },
+        pdf: {
+          ipfsHash: pdfInfo.ipfsHash,
+          pinataUrl: pdfInfo.pinataUrl,
+          fileName: pdfInfo.fileName
+        }
+      };
+
+      metadataInfo = await pinataService.uploadContractMetadata(contractMetadata);
+
+      // Cleanup temporary PDF file
+      ContractPDFGenerator.cleanup(pdfResult.filePath);
+
+      console.log('Contract PDF and metadata uploaded to IPFS:', {
+        pdf: pdfInfo,
+        metadata: metadataInfo
+      });
+
+    } catch (pdfError) {
+      console.error('Error generating/uploading PDF:', pdfError);
+      // Continue without failing the whole contract creation
+    }
 
     // Note: ContractEvents table will be handled later when payment system is implemented
     // await query(`
@@ -1782,7 +1971,20 @@ app.post("/api/rental/create", async (req, res) => {
         blockNumber: blockchainResult.blockNumber,
         gasUsed: blockchainResult.gasUsed,
         status: contractStatus,
-        message: 'Rental agreement created successfully on blockchain'
+        message: 'Rental agreement created successfully on blockchain',
+        // PDF and IPFS info
+        pdf: pdfInfo ? {
+          ipfsHash: pdfInfo.ipfsHash,
+          pinataUrl: pdfInfo.pinataUrl,
+          ipfsUrl: pdfInfo.ipfsUrl,
+          fileName: pdfInfo.fileName,
+          size: pdfInfo.size
+        } : null,
+        metadata: metadataInfo ? {
+          ipfsHash: metadataInfo.ipfsHash,
+          pinataUrl: metadataInfo.pinataUrl,
+          ipfsUrl: metadataInfo.ipfsUrl
+        } : null
       }
     });
 
@@ -2084,6 +2286,257 @@ app.get('/api/users/:userId/contracts', async (req, res) => {
       error: error.message,
       contracts: [],
       stats: { total: 0, active: 0, pending: 0, completed: 0, terminated: 0 }
+    });
+  }
+});
+
+// ===== CONTRACT PDF ENDPOINTS =====
+
+// Download contract PDF
+app.get("/api/contracts/:contractId/download-pdf", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Get contract info
+    const contractQuery = `
+      SELECT c.*, car.CarName, car.Brand, car.Description
+      FROM Contracts c
+      LEFT JOIN Cars car ON c.CarId = car.CarId
+      WHERE c.ContractId = ?
+    `;
+    const contracts = await query(contractQuery, [contractId]);
+    
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Try to find PDF files for this contract on Pinata
+    const contractFiles = await pinataService.listContractFiles(contractId);
+    const pdfFile = contractFiles.find(file => 
+      file.keyvalues?.fileType === 'contract-pdf' && 
+      file.keyvalues?.contractId === contractId
+    );
+
+    if (pdfFile) {
+      // Redirect to Pinata URL
+      const downloadUrl = pinataService.getPublicUrl(pdfFile.ipfs_pin_hash);
+      return res.redirect(downloadUrl);
+    } else {
+      // Generate PDF on-the-fly if not found
+      console.log('PDF not found on IPFS, generating new one...');
+      
+      const contractPDFData = {
+        contractId: contract.ContractId,
+        contractType: contract.Type === 'Buy' ? 'purchase' : 'rental',
+        contractAddress: 'N/A', // Historical contract may not have this
+        txHash: contract.TXHash || 'N/A',
+        carId: contract.CarId,
+        carName: contract.CarName,
+        carBrand: contract.Brand,
+        carDescription: contract.Description,
+        totalPrice: contract.TotalPrice,
+        rentalAmount: contract.TotalPrice,
+        startDate: contract.StartDate,
+        endDate: contract.EndDate,
+        userWallet: 'N/A',
+        ownerWallet: 'N/A',
+        createdAt: new Date().toISOString()
+      };
+
+      const pdfResult = await pdfGenerator.generateContract(contractPDFData);
+      
+      // Send file and cleanup
+      res.download(pdfResult.filePath, pdfResult.fileName, (err) => {
+        ContractPDFGenerator.cleanup(pdfResult.filePath);
+        if (err) {
+          console.error('Error sending PDF:', err);
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('Error downloading contract PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get contract with IPFS info
+app.get("/api/contracts/:contractId/ipfs-info", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    // Get contract info
+    const contractQuery = `
+      SELECT c.*, car.CarName, car.Brand
+      FROM Contracts c
+      LEFT JOIN Cars car ON c.CarId = car.CarId
+      WHERE c.ContractId = ?
+    `;
+    const contracts = await query(contractQuery, [contractId]);
+    
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Get IPFS files for this contract
+    const contractFiles = await pinataService.listContractFiles(contractId);
+    
+    const pdfFile = contractFiles.find(file => 
+      file.keyvalues?.fileType === 'contract-pdf'
+    );
+    
+    const metadataFile = contractFiles.find(file => 
+      file.keyvalues?.fileType === 'contract-metadata'
+    );
+
+    res.json({
+      success: true,
+      contract: {
+        ContractId: contract.ContractId,
+        CarName: `${contract.CarName} (${contract.Brand})`,
+        Type: contract.Type,
+        TotalPrice: contract.TotalPrice,
+        Status: contract.Status,
+        StartDate: contract.StartDate,
+        EndDate: contract.EndDate,
+        TXHash: contract.TXHash
+      },
+      ipfs: {
+        pdf: pdfFile ? {
+          ipfsHash: pdfFile.ipfs_pin_hash,
+          url: pinataService.getPublicUrl(pdfFile.ipfs_pin_hash),
+          fileName: pdfFile.metadata?.name || 'contract.pdf',
+          size: pdfFile.size,
+          createdAt: pdfFile.date_pinned
+        } : null,
+        metadata: metadataFile ? {
+          ipfsHash: metadataFile.ipfs_pin_hash,
+          url: pinataService.getPublicUrl(metadataFile.ipfs_pin_hash),
+          size: metadataFile.size,
+          createdAt: metadataFile.date_pinned
+        } : null
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting contract IPFS info:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ===== QUARTERLY PAYMENT MANAGEMENT =====
+
+// Get contract info with quarterly payment details
+app.get("/api/contracts/:contractId/payment-info", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    if (!contractId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID is required'
+      });
+    }
+
+    // Get contract info
+    const contractQuery = `
+      SELECT c.*, car.CarName, car.Brand, car.PriceBuy
+      FROM Contracts c
+      LEFT JOIN Cars car ON c.CarId = car.CarId
+      WHERE c.ContractId = ?
+    `;
+    const contracts = await query(contractQuery, [contractId]);
+    
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+    
+    res.json({
+      success: true,
+      contract: {
+        ContractId: contract.ContractId,
+        CarName: `${contract.CarName} (${contract.Brand})`,
+        Type: contract.Type,
+        TotalPrice: contract.TotalPrice,
+        PurchasePrice: contract.PriceBuy,
+        Status: contract.Status,
+        StartDate: contract.StartDate,
+        EndDate: contract.EndDate,
+        TXHash: contract.TXHash
+      }
+    });
+
+  } catch (error) {
+    console.error('Payment info error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Update contract status (for quarterly payment completion)
+app.post("/api/contracts/:contractId/complete-payment", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { txHash } = req.body;
+    
+    if (!contractId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID is required'
+      });
+    }
+
+    // Update contract status to completed
+    const updateQuery = `
+      UPDATE Contracts 
+      SET Status = 'Completed', TXHash = COALESCE(?, TXHash)
+      WHERE ContractId = ? AND Type = 'Buy'
+    `;
+    
+    const result = await query(updateQuery, [txHash || null, contractId]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found or not a purchase contract'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Contract completed successfully',
+      contractId,
+      status: 'Completed'
+    });
+
+  } catch (error) {
+    console.error('Complete payment error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
