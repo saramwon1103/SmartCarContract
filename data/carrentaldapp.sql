@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 17, 2025 lúc 04:45 PM
+-- Thời gian đã tạo: Th10 21, 2025 lúc 03:13 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -115,6 +115,7 @@ CREATE TABLE `contracts` (
 
 INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `Deposit`, `TotalPrice`, `Status`, `TXHash`) VALUES
 ('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', 45.00, 75.00, 'Completed', '0xabc001'),
+('CT016', 'C001', 'U036', 'U001', 'Rent', '2025-11-21', '2025-11-22', 35.00, 50.00, 'Pending', '0x12c4d59c2bfcce1bba9a05df4220002a7e7c708720736338a5973276fbd74eb3'),
 ('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', 36.00, 54.00, 'Pending', '0xabc002'),
 ('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', 60.00, 100.00, 'Completed', '0xabc003'),
 ('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', 285.00, 950.00, 'Completed', '0xabc004'),
@@ -188,11 +189,11 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddress`, `AvatarURL`, `Role`, `CreatedAt`) VALUES
-('U001', 'Nguyen Van A', 'a@example.com', 'hash1', '0xABC...', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U002', 'Nguyen Van B', 'b@example.com', 'hash2', '0xDEF...', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U003', 'Nguyen Van C', 'c@example.com', 'hash3', '0xGHI...', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U004', 'Nguyen Van D', 'd@example.com', 'hash4', '0xJKL...', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U005', 'Nguyen Van E', 'e@example.com', 'hash5', '0xMNO...', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U001', 'Nguyen Van A', 'a@example.com', 'hash1', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U002', 'Nguyen Van B', 'b@example.com', 'hash2', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U003', 'Nguyen Van C', 'c@example.com', 'hash3', '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U004', 'Nguyen Van D', 'd@example.com', 'hash4', '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U005', 'Nguyen Van E', 'e@example.com', 'hash5', '0xbda5747bfd65f08deb54cb465eb87d40e51b197e', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U006', 'Nguyen Van F', 'f@example.com', 'hash6', '0xPQR...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U007', 'Nguyen Van G', 'g@example.com', 'hash7', '0xSTU...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U008', 'Nguyen Van H', 'h@example.com', 'hash8', '0xVWX...', NULL, 'Owner', '2025-11-12 22:32:18'),
@@ -208,7 +209,10 @@ INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddre
 ('U027', 'Đỗ Thị Linh', 'linh.do@gmail.com', 'hash27', '0x901STU...', NULL, 'User', '2025-11-16 10:30:00'),
 ('U028', 'Bùi Văn Thành', 'thanh.bui@gmail.com', 'hash28', '0x234VWX...', NULL, 'User', '2025-11-16 11:45:00'),
 ('U029', 'Cao Thị Minh', 'minh.cao@gmail.com', 'hash29', '0x567YZA...', NULL, 'User', '2025-11-16 13:15:00'),
-('U030', 'Đinh Văn Quang', 'quang.dinh@gmail.com', 'hash30', '0x890BCD...', NULL, 'User', '2025-11-16 14:30:00');
+('U030', 'Đinh Văn Quang', 'quang.dinh@gmail.com', 'hash30', '0x890BCD...', NULL, 'User', '2025-11-16 14:30:00'),
+('U035', 'Car Renter', 'user@test.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', NULL, 'User', '2025-11-20 12:09:34'),
+('U036', 'Quyên Lê', 'quyen8a2113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 12:57:21'),
+('U037', 'Quyên Lê', 'saramwon113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 13:21:38');
 
 -- --------------------------------------------------------
 
@@ -248,7 +252,14 @@ INSERT INTO `wallets` (`WalletId`, `UserId`, `WalletAddress`, `NetWork`, `LastCo
 ('W027', 'U027', '0x901STU...', 'Ethereum', '2025-11-16 10:35:00'),
 ('W028', 'U028', '0x234VWX...', 'Ethereum', '2025-11-16 11:50:00'),
 ('W029', 'U029', '0x567YZA...', 'Ethereum', '2025-11-16 13:20:00'),
-('W030', 'U030', '0x890BCD...', 'Ethereum', '2025-11-16 14:35:00');
+('W030', 'U030', '0x890BCD...', 'Ethereum', '2025-11-16 14:35:00'),
+('W031', 'U032', '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', 'Hardhat', '2025-11-20 12:04:16'),
+('W032', 'U033', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', 'Hardhat', '2025-11-20 12:09:34'),
+('W033', 'U034', '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', 'Hardhat', '2025-11-20 12:09:34'),
+('W034', 'U035', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', 'Hardhat', '2025-11-20 12:09:34'),
+('W035', 'U031', '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', 'Hardhat', '2025-11-20 12:11:55'),
+('W036', 'U036', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-20 13:54:47'),
+('W037', 'U037', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', 'Hardhat', '2025-11-20 13:21:48');
 
 --
 -- Chỉ mục cho các bảng đã đổ

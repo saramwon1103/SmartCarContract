@@ -173,10 +173,11 @@
   height: 40px;
   object-fit: cover;
   border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .table-car-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--blue-700);
   font-size: 14px;
   margin-bottom: 2px;
@@ -190,10 +191,57 @@
 .table-price {
   font-size: 14px;
   color: var(--blue-700);
+  font-weight: 600;
+}
+
+.contract-id {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: var(--blue-600);
+  background: var(--blue-50);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.contract-type-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.contract-type-badge.rent {
+  background: #E0F2FE;
+  color: #0369A1;
+}
+
+.contract-type-badge.buy {
+  background: #F3E8FF;
+  color: #7C3AED;
+}
+
+/* Date Range Styling */
+.date-range {
+  font-size: 12px;
+}
+
+.date-item {
+  margin-bottom: 2px;
+}
+
+.date-label {
+  color: var(--gray-500);
   font-weight: 500;
 }
 
-/* Status Badge */
+.date-value {
+  color: var(--blue-700);
+  font-weight: 600;
+  margin-left: 4px;
+}
 .status-badge {
   padding: 4px 12px;
   border-radius: 12px;
@@ -331,6 +379,104 @@ section.content {
 .main {
   overflow-x: hidden;
   max-width: 100%;
+}
+
+/* Table Actions */
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view {
+  background: var(--blue-100);
+  color: var(--blue-700);
+}
+
+.btn-view:hover {
+  background: var(--blue-200);
+  transform: translateY(-1px);
+}
+
+.btn-pay {
+  background: #10B981;
+  color: white;
+}
+
+.btn-pay:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Row Selection */
+.contract-row.selected {
+  background: var(--blue-100) !important;
+  border-left: 4px solid var(--blue-500);
+}
+
+.contract-row.selected .table-car-name {
+  color: var(--blue-800);
+}
+
+/* Contract Type Badge */
+.contract-type-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.contract-type-badge.rent {
+  background: #E0F2FE;
+  color: #0369A1;
+}
+
+.contract-type-badge.buy {
+  background: #F3E8FF;
+  color: #7C3AED;
+}
+
+/* Date Range Styling */
+.date-range {
+  font-size: 12px;
+}
+
+.date-item {
+  margin-bottom: 2px;
+}
+
+.date-label {
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.date-value {
+  color: var(--blue-700);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Contract ID Styling */
+.contract-id {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: var(--blue-600);
+  background: var(--blue-50);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 /* Responsive */
