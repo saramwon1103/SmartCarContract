@@ -136,12 +136,18 @@
 
   // Handle logout
   function handleLogout() {
+    console.log('Logout clicked');
+    console.log('AuthManager available:', typeof AuthManager !== 'undefined');
+    
     // Use AuthManager if available
     if (typeof AuthManager !== 'undefined' && AuthManager.logout) {
+      console.log('Using AuthManager logout');
       AuthManager.logout();
     } else {
+      console.log('Using fallback logout');
       // Fallback: clear localStorage and redirect
-      localStorage.removeItem('currentUser');
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
       window.location.href = 'login.html';
     }
   }

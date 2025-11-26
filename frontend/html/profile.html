@@ -10,8 +10,8 @@
 </head>
 <body>
   <div class="dashboard-container">
-    <!-- Sidebar -->
-    <script src="../js/user_sidebar.js"></script>
+    <!-- Sidebar will be loaded dynamically based on user role -->
+    
     <main class="main">
       <header class="topbar">
         <div class="search">
@@ -223,6 +223,28 @@
         console.log('Image selected:', file.name);
       }
     };
+  </script>
+
+  <!-- Load sidebar dynamically based on user role -->
+  <script src="../js/auth.js"></script>
+  <script>
+    // Load appropriate sidebar based on user role
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = AuthManager.getCurrentUser();
+      if (user) {
+        if (user.Role === 'Owner') {
+          // Load owner sidebar
+          const script = document.createElement('script');
+          script.src = '../js/owner_sidebar.js';
+          document.head.appendChild(script);
+        } else {
+          // Load user sidebar
+          const script = document.createElement('script');
+          script.src = '../js/user_sidebar.js';
+          document.head.appendChild(script);
+        }
+      }
+    });
   </script>
 </body>
 </html>

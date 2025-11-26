@@ -6,10 +6,130 @@
     <title>My Contracts | Morent</title>
     <link rel="stylesheet" href="../css/admin_dashboard.css" />
     <link rel="stylesheet" href="../css/my_contracts.css" />
+    <link rel="stylesheet" href="../css/owner_confirmation.css" />
+    <style>
+      .wallet-section {
+        margin-bottom: 20px;
+      }
+      
+      .wallet-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+      }
+      
+      .wallet-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ef4444;
+        transition: background 0.3s;
+      }
+      
+      .status-dot.connected {
+        background: #10b981;
+      }
+      
+      .btn-connect {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+      
+      .btn-connect:hover {
+        background: #2563eb;
+      }
+      
+      .wallet-info {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 15px;
+      }
+      
+      .wallet-address {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      
+      .wallet-balances {
+        display: flex;
+        gap: 20px;
+      }
+      
+      .balance-item {
+        display: flex;
+        justify-content: space-between;
+        min-width: 100px;
+        font-weight: 500;
+      }
+      
+      .payment-section {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+      }
+      
+      .payment-info {
+        margin-bottom: 15px;
+      }
+      
+      .payment-amount {
+        font-size: 18px;
+        font-weight: bold;
+        color: #059669;
+        margin: 10px 0;
+      }
+      
+      .btn-pay {
+        background: #059669;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.3s;
+        width: 100%;
+      }
+      
+      .btn-pay:hover:not(:disabled) {
+        background: #047857;
+      }
+      
+      .btn-pay:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+    </style>
   </head>
   <body>
     <div class="dashboard-container">
-      <!-- Sidebar will be loaded by user_sidebar.js -->
+      <!-- Sidebar container -->
+      <div id="sidebar-container"></div>
 
       <main class="main">
         <header class="topbar">
@@ -23,6 +143,36 @@
         </header>
 
         <section class="content">
+          <!-- Wallet Connection Section -->
+          <div class="wallet-section">
+            <div class="wallet-card">
+              <div class="wallet-status">
+                <div class="status-indicator">
+                  <div id="wallet-status-dot" class="status-dot"></div>
+                  <span id="wallet-status-text">Wallet not connected</span>
+                </div>
+                <button id="connect-wallet-btn" class="btn btn-connect">Connect Wallet</button>
+              </div>
+              
+              <div id="wallet-info" class="wallet-info" style="display: none;">
+                <div class="wallet-address">
+                  <span>Address:</span>
+                  <span id="wallet-address">-</span>
+                </div>
+                <div class="wallet-balances">
+                  <div class="balance-item">
+                    <span>ETH:</span>
+                    <span id="eth-balance">0.0000</span>
+                  </div>
+                  <div class="balance-item">
+                    <span>CPT:</span>
+                    <span id="cpt-balance">0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="left-panel left-panel-full">
             <div class="card">
               <div class="header filter-header">
@@ -91,64 +241,371 @@
                   <h4 id="detailCarName">-</h4>
                   <p id="detailCarType">-</p>
                 </div>
-                <span id="detailContractId">-</span>
               </div>
               
-              <div class="contract-detail-section">
-                <p class="contract-detail-label">Contract Type</p>
-                <p class="contract-detail-value" id="detailContractType">-</p>
-              </div>
-              
-              <div class="contract-detail-section">
-                <p class="contract-detail-label">Transaction Hash (TXHash)</p>
-                <p class="contract-detail-hash" id="detailTXHash">-</p>
-              </div>
-              
-              <div class="rental-period">
-                <div>
-                  <h5>Start Date</h5>
-                  <p id="detailStartDate">-</p>
+              <div class="contract-details-info">
+                <div class="contract-basic-info">
+                  <h5>Basic Information</h5>
+                  <p>Contract ID: <span id="detailContractId">-</span></p>
+                  <p>Type: <span id="detailContractType">-</span></p>
+                  <p>Transaction: <span id="detailTXHash">-</span></p>
+                  <p>Start Date: <span id="detailStartDate">-</span></p>
+                  <p>End Date: <span id="detailEndDate">-</span></p>
                 </div>
-                <div>
-                  <h5>End Date</h5>
-                  <p id="detailEndDate">-</p>
+                
+                <div class="contract-counterparty-info">
+                  <h5>Counterparty Information</h5>
+                  <p>Name: <span id="detailCounterpartyName">-</span></p>
+                  <p>Email: <span id="detailCounterpartyEmail">-</span></p>
+                </div>
+                
+                <div class="contract-payment-info">
+                  <h5>Payment Information</h5>
+                  <p>Installment Amount: <span id="detailInstallmentAmount">-</span></p>
+                  <p>Paid Periods: <span id="detailPaidPeriods">-</span> / <span id="detailTotalPeriods">-</span></p>
+                  <p>Next Payment Due: <span id="detailNextPayment">-</span></p>
+                </div>
+                
+                <div class="total-price">
+                  <p>Total Price</p>
+                  <h3 id="detailTotalPrice">-</h3>
+                </div>
+                
+                <!-- Payment Section -->
+                <div id="payment-section" class="payment-section" style="display: none;">
+                  <h5>💳 Make Payment</h5>
+                  <div class="payment-info">
+                    <p>You need to complete payment to activate this contract.</p>
+                    <div class="payment-amount">
+                      Pay: <span id="payment-amount">$0.00</span> in CPT tokens
+                    </div>
+                  </div>
+                  <button id="make-payment-btn" class="btn-pay" disabled>Connect Wallet to Pay</button>
+                </div>
+                
+                <div class="contract-actions">
+                  <button id="payBtn" class="btn-primary">Pay Installment</button>
+                  <button id="viewOnChain" class="btn-secondary">View on Blockchain</button>
                 </div>
               </div>
-              
-              <div class="contract-customer-info">
-                <h5>Counterparty</h5>
-                <p>Name: <span id="detailCounterpartyName">-</span></p>
-                <p>Email: <span id="detailCounterpartyEmail">-</span></p>
-              </div>
-              
-              <div class="contract-payment-info">
-                <h5>Payment Information</h5>
-                <p>Installment Amount: <span id="detailInstallmentAmount">-</span></p>
-                <p>Paid Periods: <span id="detailPaidPeriods">-</span> / <span id="detailTotalPeriods">-</span></p>
-                <p>Next Payment Due: <span id="detailNextPayment">-</span></p>
-              </div>
-              
-              <div class="total-price">
-                <p>Total Price</p>
-                <h3 id="detailTotalPrice">-</h3>
-              </div>
-              
-              <div class="contract-actions">
-                <button id="payBtn" class="btn-primary">Pay Installment</button>
-                <button id="viewOnChain" class="btn-secondary">View on Blockchain</button>
-              </div>
-            </div>
 
-            <!-- Empty State -->
-            <div class="card" id="emptyState">
-              <p>Select a contract to view details</p>
+              <!-- Empty State -->
+              <div class="card" id="emptyState">
+                <p>Select a contract to view details</p>
+              </div>
             </div>
           </div>
         </section>
       </main>
     </div>
 
-    <script src="../js/user_sidebar.js"></script>
+  <!-- Load sidebar dynamically based on user role -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/contract-notifications.js"></script>
+    <script>
+      // Load appropriate sidebar based on user role
+      document.addEventListener('DOMContentLoaded', async () => {
+        const user = AuthManager.getCurrentUser();
+        if (user) {
+          const sidebarContainer = document.getElementById('sidebar-container');
+          
+          if (user.Role === 'Owner') {
+            // Load owner sidebar HTML
+            try {
+              const response = await fetch('../html/components/owner_sidebar.html');
+              const sidebarHTML = await response.text();
+              sidebarContainer.innerHTML = sidebarHTML;
+              
+              // Load owner sidebar script
+              const script = document.createElement('script');
+              script.src = '../js/owner_sidebar.js';
+              document.head.appendChild(script);
+            } catch (error) {
+              console.error('Failed to load owner sidebar:', error);
+            }
+          } else {
+            // Load user sidebar HTML  
+            try {
+              const response = await fetch('../html/components/user_sidebar.html');
+              const sidebarHTML = await response.text();
+              sidebarContainer.innerHTML = sidebarHTML;
+              
+              // Load user sidebar script
+              const script = document.createElement('script');
+              script.src = '../js/user_sidebar.js';
+              document.head.appendChild(script);
+            } catch (error) {
+              console.error('Failed to load user sidebar:', error);
+            }
+          }
+        }
+      });
+    </script>
     <script src="../js/my_contracts.js"></script>
+    
+    <script>
+      // Wallet Connection Logic
+      let provider = null;
+      let currentAccount = null;
+      let cptContract = null;
+      let ethBalance = 0;
+      let cptBalance = 0;
+      
+      const API_BASE_URL = 'http://localhost:3000/api';
+      
+      const CONTRACT_ADDRESSES = {
+        CPT_TOKEN: '0x5fbdb2315678afecb367f032d93f642f64180aa3', // Update with actual deployed address
+        RENTAL_FACTORY: '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512' // Update with actual deployed address
+      };
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('My Contracts page loaded, initializing wallet...');
+        initializeWallet();
+      });
+      
+      function initializeWallet() {
+        console.log('Initializing wallet connection...');
+        const connectBtn = document.getElementById('connect-wallet-btn');
+        const makePaymentBtn = document.getElementById('make-payment-btn');
+        
+        if (!connectBtn) {
+          console.error('Connect wallet button not found!');
+          return;
+        }
+        
+        if (typeof window.ethereum === 'undefined') {
+          console.log('MetaMask not detected');
+          connectBtn.textContent = 'Install MetaMask';
+          connectBtn.onclick = () => window.open('https://metamask.io/', '_blank');
+          return;
+        }
+        
+        console.log('MetaMask detected, setting up provider...');
+        provider = new ethers.BrowserProvider(window.ethereum);
+        
+        connectBtn.addEventListener('click', connectWallet);
+        if (makePaymentBtn) {
+          makePaymentBtn.addEventListener('click', makeContractPayment);
+        }
+        
+        // Check if already connected
+        checkExistingConnection();
+      }
+      
+      async function checkExistingConnection() {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            currentAccount = accounts[0];
+            await setupWalletConnection();
+          }
+        } catch (error) {
+          console.error('Error checking existing connection:', error);
+        }
+      }
+      
+      async function connectWallet() {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          currentAccount = accounts[0];
+          await setupWalletConnection();
+        } catch (error) {
+          console.error('Error connecting wallet:', error);
+          alert('Failed to connect wallet: ' + error.message);
+        }
+      }
+      
+      async function setupWalletConnection() {
+        try {
+          const signer = await provider.getSigner();
+          
+          // Setup CPT contract
+          const cptAbi = [
+            "function balanceOf(address owner) view returns (uint256)",
+            "function transfer(address to, uint256 amount) returns (bool)",
+            "function approve(address spender, uint256 amount) returns (bool)"
+          ];
+          
+          cptContract = new ethers.Contract(CONTRACT_ADDRESSES.CPT_TOKEN, cptAbi, signer);
+          
+          updateWalletUI();
+          await loadBalances();
+          updatePaymentSection();
+        } catch (error) {
+          console.error('Error setting up wallet connection:', error);
+        }
+      }
+      
+      function updateWalletUI() {
+        console.log('Updating wallet UI, current account:', currentAccount);
+        const statusDot = document.getElementById('wallet-status-dot');
+        const statusText = document.getElementById('wallet-status-text');
+        const walletInfo = document.getElementById('wallet-info');
+        const connectBtn = document.getElementById('connect-wallet-btn');
+        const addressEl = document.getElementById('wallet-address');
+        
+        console.log('UI Elements found:', {
+          statusDot: !!statusDot,
+          statusText: !!statusText, 
+          walletInfo: !!walletInfo,
+          connectBtn: !!connectBtn,
+          addressEl: !!addressEl
+        });
+        
+        if (currentAccount) {
+          console.log('Setting connected state...');
+          statusDot.classList.add('connected');
+          statusText.textContent = 'Wallet Connected';
+          walletInfo.style.display = 'block';
+          connectBtn.style.display = 'none';
+          addressEl.textContent = currentAccount.substring(0, 6) + '...' + currentAccount.substring(38);
+        } else {
+          console.log('Setting disconnected state...');
+          statusDot.classList.remove('connected');
+          statusText.textContent = 'Wallet not connected';
+          walletInfo.style.display = 'none';
+          connectBtn.style.display = 'inline-block';
+        }
+      }
+      
+      async function loadBalances() {
+        try {
+          // Get ETH balance
+          const ethBalanceWei = await provider.getBalance(currentAccount);
+          ethBalance = parseFloat(ethers.formatEther(ethBalanceWei));
+          document.getElementById('eth-balance').textContent = ethBalance.toFixed(4);
+          
+          // Get CPT balance from backend API
+          const response = await fetch(`${API_BASE_URL}/wallet/cpt-balance/${currentAccount}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            cptBalance = parseFloat(data.balance);
+            document.getElementById('cpt-balance').textContent = cptBalance.toFixed(2);
+          } else {
+            console.error('Failed to load CPT balance:', data.error);
+            cptBalance = 0;
+            document.getElementById('cpt-balance').textContent = '0.00';
+          }
+          
+          updatePaymentSection();
+        } catch (error) {
+          console.error('Error loading balances:', error);
+        }
+      }
+      
+      function updatePaymentSection() {
+        const makePaymentBtn = document.getElementById('make-payment-btn');
+        const paymentSection = document.getElementById('payment-section');
+        
+        if (!makePaymentBtn || !paymentSection) return;
+        
+        // Get current contract from contracts manager
+        const contract = window.contractsManager?.selectedContract;
+        
+        if (contract && (contract.Status === 'Pending' || contract.Status === 'Active')) {
+          paymentSection.style.display = 'block';
+          
+          const paymentAmount = parseFloat(contract.TotalPrice || 0);
+          document.getElementById('payment-amount').textContent = `$${paymentAmount.toFixed(2)}`;
+          
+          if (currentAccount) {
+            if (cptBalance >= paymentAmount) {
+              makePaymentBtn.disabled = false;
+              makePaymentBtn.textContent = `Pay ${paymentAmount.toFixed(2)} CPT`;
+              makePaymentBtn.style.background = '#059669';
+            } else {
+              makePaymentBtn.disabled = true;
+              makePaymentBtn.textContent = `Insufficient CPT Balance (${cptBalance.toFixed(2)})`;
+              makePaymentBtn.style.background = '#ef4444';
+            }
+          } else {
+            makePaymentBtn.disabled = true;
+            makePaymentBtn.textContent = 'Connect Wallet to Pay';
+            makePaymentBtn.style.background = '#9ca3af';
+          }
+        } else {
+          paymentSection.style.display = 'none';
+        }
+      }
+      
+      async function makeContractPayment() {
+        const contract = window.contractsManager?.selectedContract;
+        if (!contract || !currentAccount || !cptContract) {
+          alert('Please select a contract and connect your wallet');
+          return;
+        }
+        
+        try {
+          const paymentAmount = parseFloat(contract.TotalPrice);
+          
+          const confirmed = confirm(`Complete payment of ${paymentAmount} CPT for contract ${contract.ContractId}?`);
+          if (!confirmed) return;
+          
+          const makePaymentBtn = document.getElementById('make-payment-btn');
+          makePaymentBtn.disabled = true;
+          makePaymentBtn.textContent = 'Processing Payment...';
+          
+          // First approve the CPT spending
+          const amountInWei = ethers.parseUnits(paymentAmount.toString(), 18);
+          const approveTx = await cptContract.approve(CONTRACT_ADDRESSES.RENTAL_FACTORY, amountInWei);
+          console.log('Approval transaction:', approveTx.hash);
+          
+          await approveTx.wait();
+          
+          // Create a demo payment transaction
+          const signer = await provider.getSigner();
+          const paymentTx = await signer.sendTransaction({
+            to: currentAccount,
+            value: ethers.parseEther('0'),
+            gasLimit: 21000
+          });
+          
+          await paymentTx.wait();
+          
+          // Call backend to complete payment
+          const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userWalletAddress: currentAccount,
+              txHash: paymentTx.hash,
+              paymentAmount: paymentAmount
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('✅ Payment completed successfully! Contract is now active.');
+            window.contractsManager.loadContracts();
+            await loadBalances();
+          } else {
+            throw new Error(result.error || 'Payment failed');
+          }
+          
+        } catch (error) {
+          console.error('Payment error:', error);
+          alert('Payment failed: ' + error.message);
+        } finally {
+          updatePaymentSection();
+        }
+      }
+      
+      // Listen for account changes
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', async (accounts) => {
+          if (accounts.length > 0) {
+            currentAccount = accounts[0];
+            await setupWalletConnection();
+          } else {
+            currentAccount = null;
+            updateWalletUI();
+            updatePaymentSection();
+          }
+        });
+      }
+    </script>
   </body>
 </html>

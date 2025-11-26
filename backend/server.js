@@ -76,6 +76,16 @@ db.connect(err => {
   console.log("Connected to MySQL database!");
 });
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    database: "connected"
+  });
+});
+
 function query(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.query(sql, params, (err, results) => {
@@ -130,6 +140,10 @@ async function generateSequentialId(table, column, prefix, padLength = 3) {
   
   console.log(`Generated unique ID: ${newId} (after ${attempts} attempts)`);
   return newId;
+}
+
+async function generateContractId() {
+  return generateSequentialId("Contracts", "ContractId", "CT");
 }
 
 async function generateUserId() {
@@ -1810,7 +1824,7 @@ app.post("/api/rental/create", async (req, res) => {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         
-        const contractStatus = contractType === 'purchase' && paymentType === 'quarterly' ? 'Active' : 'Pending';
+        const contractStatus = 'Pending'; // All contracts start as Pending until owner confirms
         
         await query(insertQuery, [
           contractId,
@@ -1970,7 +1984,7 @@ app.post("/api/rental/create", async (req, res) => {
         txHash: blockchainResult.txHash,
         blockNumber: blockchainResult.blockNumber,
         gasUsed: blockchainResult.gasUsed,
-        status: contractStatus,
+        status: 'Pending', // All contracts start as Pending until owner confirms
         message: 'Rental agreement created successfully on blockchain',
         // PDF and IPFS info
         pdf: pdfInfo ? {
@@ -2087,9 +2101,608 @@ app.post("/api/rental/sign-as-owner", async (req, res) => {
   }
 });
 
-// ===== PAYMENT ENDPOINTS =====
+// ===== OWNER CONTRACT CONFIRMATION ENDPOINTS =====
 
-// Get payment schedule for a contract
+// Create contract request (without payment)
+app.post("/api/contracts/create-request", async (req, res) => {
+  try {
+    const { 
+      carId, 
+      userId, 
+      contractType, 
+      startDate, 
+      endDate, 
+      startTime, 
+      endTime, 
+      totalPrice, 
+      paymentType,
+      quarters,
+      quarterlyAmount,
+      totalPurchasePrice,
+      note 
+    } = req.body;
+
+    console.log('Creating contract request:', req.body);
+
+    // Validate required fields
+    if (!carId || !userId || !contractType || !startDate || !totalPrice) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: carId, userId, contractType, startDate, totalPrice'
+      });
+    }
+
+    // Validate contract type - accept both 'rental'/'rent' and 'purchase'
+    const normalizedType = contractType.toLowerCase();
+    if (!['rent', 'rental', 'purchase'].includes(normalizedType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract type must be "rental", "rent", or "purchase"'
+      });
+    }
+
+    // Normalize type for database storage
+    const dbContractType = normalizedType === 'rental' ? 'rent' : normalizedType;
+
+    // Validate end date for rental contracts
+    if (['rent', 'rental'].includes(normalizedType) && !endDate) {
+      return res.status(400).json({
+        success: false,
+        error: 'End date is required for rental contracts'
+      });
+    }
+
+    // Get car information to find owner
+    const cars = await query(
+      `SELECT CarId, OwnerId, CarName, Brand, PriceRent, PriceBuy 
+       FROM Cars WHERE CarId = ? AND Status = 'Available'`,
+      [carId]
+    );
+
+    if (!cars.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Car not found or not available'
+      });
+    }
+
+    const car = cars[0];
+
+    // Prepare additional data for purchase contracts
+    let additionalNote = note || '';
+    if (dbContractType === 'purchase') {
+      if (paymentType === 'quarterly' && quarters && quarterlyAmount) {
+        additionalNote += `\nPayment Plan: ${quarters} quarters, ${quarterlyAmount} CPT per quarter, Total: ${totalPurchasePrice || totalPrice} CPT`;
+      } else if (paymentType === 'full') {
+        additionalNote += `\nPayment: Full amount (${totalPurchasePrice || totalPrice} CPT)`;
+      }
+    }
+
+    // Generate contract ID with proper format (5 characters max)
+    const contractId = await generateContractId();
+
+    // Create contract with Pending status - wrap in transaction
+    await query('START TRANSACTION');
+    
+    try {
+      const insertResult = await query(
+        `INSERT INTO Contracts (
+          ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, 
+          StartTime, EndTime, TotalPrice, Note, Status, CreatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
+        [
+          contractId,
+          carId,
+          userId,
+          car.OwnerId,
+          dbContractType, // Use normalized type
+          startDate,
+          endDate || null,
+          startTime || null,
+          endTime || null,
+          totalPrice,
+          additionalNote || null
+        ]
+      );
+
+      console.log('Contract created successfully:', contractId);
+
+      // Create notification for owner  
+      const notificationId = `NOT${String(Date.now()).slice(-7)}`; // NOT + 7 digits = 10 chars max
+      await query(
+        `INSERT INTO ContractNotifications (
+          NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+        ) VALUES (?, ?, ?, 'pending_confirmation', ?, ?, 0, NOW())`,
+        [
+          notificationId,
+          contractId,
+          car.OwnerId,
+          'New Contract Requires Confirmation',
+          `A new ${dbContractType} contract for ${car.CarName} (${car.Brand}) requires your confirmation. Total: $${totalPrice}`
+        ]
+      );
+
+      // Commit transaction
+      await query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Contract request created successfully',
+        contractId: contractId,
+        status: 'Pending',
+        carName: car.CarName,
+        ownerNotified: true
+      });
+
+    } catch (innerError) {
+      // Rollback transaction on error
+      await query('ROLLBACK');
+      throw innerError;
+    }
+
+  } catch (error) {
+    console.error('Error creating contract request:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Owner confirm pending contract
+app.post("/api/contracts/:contractId/confirm", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { ownerWalletAddress } = req.body;
+
+    if (!contractId || !ownerWalletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID and owner wallet address are required'
+      });
+    }
+
+    // Get contract details
+    const contracts = await query(
+      `SELECT c.*, car.CarName, u.FullName as UserName 
+       FROM Contracts c 
+       LEFT JOIN Cars car ON c.CarId = car.CarId 
+       LEFT JOIN Users u ON c.UserId = u.UserId 
+       WHERE c.ContractId = ? AND c.Status = 'Pending'`,
+      [contractId]
+    );
+
+    if (contracts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pending contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Update contract status to Confirmed (waiting for user payment)
+    await query(
+      `UPDATE Contracts 
+       SET Status = 'Confirmed', 
+           OwnerConfirmAt = NOW() 
+       WHERE ContractId = ?`,
+      [contractId]
+    );
+
+    // Create notification for user about payment
+    const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+    await query(
+      `INSERT INTO ContractNotifications (
+        NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+      ) VALUES (?, ?, ?, 'payment_due', ?, ?, 0, NOW())`,
+      [
+        notificationId,
+        contractId,
+        contract.UserId,
+        'Payment Required',
+        `Your ${contract.Type} contract for ${contract.CarName} has been confirmed by the owner. Please make payment to activate the contract.`
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Contract confirmed successfully. User can now make payment.',
+      contractId: contractId,
+      newStatus: 'Confirmed'
+    });
+
+  } catch (error) {
+    console.error('Error confirming contract:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// User payment for confirmed contract
+app.post("/api/contracts/:contractId/pay", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { userWalletAddress, txHash, paidAmount } = req.body;
+
+    if (!contractId || !userWalletAddress || !txHash || !paidAmount) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID, wallet address, transaction hash, and paid amount are required'
+      });
+    }
+
+    // Get contract details
+    const contracts = await query(
+      `SELECT c.*, car.CarName, car.OwnerId 
+       FROM Contracts c 
+       LEFT JOIN Cars car ON c.CarId = car.CarId 
+       WHERE c.ContractId = ? AND c.Status = 'Confirmed'`,
+      [contractId]
+    );
+
+    if (contracts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Confirmed contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Update contract with payment info
+    await query(
+      `UPDATE Contracts 
+       SET Status = 'Paid', 
+           PaymentTXHash = ?,
+           PaymentCompletedAt = NOW(),
+           PaidAmount = ?
+       WHERE ContractId = ?`,
+      [txHash, paidAmount, contractId]
+    );
+
+    // Create notification for owner about payment received
+    const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+    await query(
+      `INSERT INTO ContractNotifications (
+        NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+      ) VALUES (?, ?, ?, 'payment_received', ?, ?, 0, NOW())`,
+      [
+        notificationId,
+        contractId,
+        contract.OwnerId,
+        'Payment Received',
+        `Payment of $${paidAmount} received for ${contract.CarName}. Please confirm to activate the contract.`
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment successful. Waiting for owner confirmation.',
+      contractId: contractId,
+      newStatus: 'Paid',
+      txHash: txHash,
+      paidAmount: paidAmount
+    });
+
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Owner final confirmation via MetaMask to activate contract
+app.post("/api/contracts/:contractId/activate", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { ownerWalletAddress, txHash } = req.body;
+
+    if (!contractId || !ownerWalletAddress || !txHash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID, owner wallet address, and transaction hash are required'
+      });
+    }
+
+    // Get contract details
+    const contracts = await query(
+      `SELECT c.*, car.CarName, u.FullName as UserName 
+       FROM Contracts c 
+       LEFT JOIN Cars car ON c.CarId = car.CarId 
+       LEFT JOIN Users u ON c.UserId = u.UserId 
+       WHERE c.ContractId = ? AND c.Status = 'Paid'`,
+      [contractId]
+    );
+
+    if (contracts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Paid contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Update contract status to Active
+    await query(
+      `UPDATE Contracts 
+       SET Status = 'Active', 
+           OwnerConfirmTXHash = ?
+       WHERE ContractId = ?`,
+      [txHash, contractId]
+    );
+
+    // Update car status to rented/sold
+    const carStatus = contract.Type === 'purchase' ? 'Sold' : 'Rented';
+    await query(
+      `UPDATE Cars SET Status = ? WHERE CarId = ?`,
+      [carStatus, contract.CarId]
+    );
+
+    // Create notification for user about contract activation
+    const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+    await query(
+      `INSERT INTO ContractNotifications (
+        NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+      ) VALUES (?, ?, ?, 'contract_completed', ?, ?, 0, NOW())`,
+      [
+        notificationId,
+        contractId,
+        contract.UserId,
+        'Contract Active',
+        `Your ${contract.Type} contract for ${contract.CarName} is now active! You can start using the vehicle.`
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Contract activated successfully!',
+      contractId: contractId,
+      newStatus: 'Active',
+      carName: contract.CarName,
+      carStatus: carStatus
+    });
+
+  } catch (error) {
+    console.error('Error activating contract:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// User complete payment
+app.post("/api/contracts/:contractId/payment", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { userWalletAddress, txHash, paymentAmount } = req.body;
+
+    if (!contractId || !userWalletAddress || !txHash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract ID, wallet address, and transaction hash are required'
+      });
+    }
+
+    // Get contract details
+    const contracts = await query(
+      `SELECT * FROM Contracts WHERE ContractId = ? AND Status = 'Active'`,
+      [contractId]
+    );
+
+    if (contracts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Active contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Verify payment amount matches contract total
+    const expectedAmount = parseFloat(contract.TotalPrice);
+    const paidAmount = parseFloat(paymentAmount);
+
+    if (Math.abs(expectedAmount - paidAmount) > 0.001) { // Allow small floating point differences
+      return res.status(400).json({
+        success: false,
+        error: `Payment amount (${paidAmount}) does not match contract total (${expectedAmount})`
+      });
+    }
+
+    // Update contract status to Completed
+    await query(
+      `UPDATE Contracts 
+       SET Status = 'Completed',
+           PaymentTXHash = ?,
+           PaymentCompletedAt = NOW(),
+           PaidAmount = ?
+       WHERE ContractId = ?`,
+      [txHash, paidAmount, contractId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Payment completed successfully',
+      contractId: contractId,
+      newStatus: 'Completed',
+      paidAmount: paidAmount
+    });
+
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Quarterly payment endpoint for rental contracts
+app.post("/api/contracts/:contractId/quarterly-payment", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { userWalletAddress, txHash, paymentAmount, quarter } = req.body;
+
+    // Validate required fields
+    if (!userWalletAddress || !txHash || !paymentAmount || !quarter) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required payment information'
+      });
+    }
+
+    // Get contract details
+    const contracts = await query(
+      `SELECT * FROM Contracts WHERE ContractId = ?`,
+      [contractId]
+    );
+
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Verify contract is active
+    if (contract.Status !== 'Active') {
+      return res.status(400).json({
+        success: false,
+        error: 'Contract must be active for quarterly payments'
+      });
+    }
+
+    // Record quarterly payment in database
+    await query(
+      `INSERT INTO QuarterlyPayments (ContractId, Quarter, PaymentAmount, TXHash, UserWalletAddress, PaymentDate)
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [contractId, quarter, paymentAmount, txHash, userWalletAddress]
+    );
+
+    // Update contract with latest payment info
+    await query(
+      `UPDATE Contracts SET 
+         LastPaymentTXHash = ?,
+         LastPaymentDate = NOW(),
+         LastPaymentAmount = ?
+       WHERE ContractId = ?`,
+      [txHash, paymentAmount, contractId]
+    );
+
+    res.json({
+      success: true,
+      message: `Quarterly payment ${quarter}/4 completed successfully`,
+      contractId: contractId,
+      quarter: quarter,
+      paymentAmount: paymentAmount,
+      txHash: txHash
+    });
+
+  } catch (error) {
+    console.error('Error processing quarterly payment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get quarterly payment history for a contract
+app.get("/api/contracts/:contractId/quarterly-payments", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+
+    // Get quarterly payments
+    const payments = await query(
+      `SELECT * FROM QuarterlyPayments 
+       WHERE ContractId = ? 
+       ORDER BY Quarter ASC`,
+      [contractId]
+    );
+
+    // Get contract details to calculate total expected payments
+    const contracts = await query(
+      `SELECT TotalPrice, StartDate, EndDate, Type FROM Contracts WHERE ContractId = ?`,
+      [contractId]
+    );
+
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+
+    const contract = contracts[0];
+    const totalPrice = parseFloat(contract.TotalPrice);
+    const quarterlyAmount = totalPrice / 4;
+
+    // Calculate payment status
+    const paymentStatus = {
+      totalQuarters: 4,
+      paidQuarters: payments.length,
+      totalExpected: totalPrice,
+      totalPaid: payments.reduce((sum, payment) => sum + parseFloat(payment.PaymentAmount), 0),
+      quarterlyAmount: quarterlyAmount,
+      nextQuarter: payments.length < 4 ? payments.length + 1 : null,
+      isComplete: payments.length === 4
+    };
+
+    res.json({
+      success: true,
+      payments: payments,
+      status: paymentStatus
+    });
+
+  } catch (error) {
+    console.error('Error getting quarterly payments:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get pending contracts for owner
+app.get("/api/owners/:ownerId/pending-contracts", async (req, res) => {
+  try {
+    const { ownerId } = req.params;
+
+    const pendingContracts = await query(
+      `SELECT c.*, car.CarName, car.Brand, car.ImageURL,
+              u.FullName as UserName, u.Email as UserEmail
+       FROM Contracts c
+       LEFT JOIN Cars car ON c.CarId = car.CarId
+       LEFT JOIN Users u ON c.UserId = u.UserId
+       WHERE c.OwnerId = ? AND c.Status = 'Pending'
+       ORDER BY c.CreatedAt DESC`,
+      [ownerId]
+    );
+
+    res.json({
+      success: true,
+      contracts: pendingContracts
+    });
+
+  } catch (error) {
+    console.error('Error fetching pending contracts:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+
 app.get('/api/payment/schedule/:contractId', async (req, res) => {
   try {
     const { contractId } = req.params;
@@ -2243,6 +2856,20 @@ app.get('/api/payment/overdue/:userId', async (req, res) => {
 app.get('/api/users/:userId/contracts', async (req, res) => {
   try {
     const { userId } = req.params;
+    const { owner } = req.query; // Check if requesting as owner
+    
+    let whereClause = '';
+    let queryParams = [];
+    
+    if (owner === 'true') {
+      // Get contracts where user is the owner
+      whereClause = 'WHERE c.OwnerId = ?';
+      queryParams = [userId];
+    } else {
+      // Get contracts where user is the renter OR owner (default behavior)
+      whereClause = 'WHERE c.UserId = ? OR c.OwnerId = ?';
+      queryParams = [userId, userId];
+    }
     
     // Get contracts where user is either renter or owner
     const contracts = await query(`
@@ -2260,9 +2887,9 @@ app.get('/api/users/:userId/contracts', async (req, res) => {
       LEFT JOIN Cars car ON c.CarId = car.CarId
       LEFT JOIN Users renter ON c.UserId = renter.UserId
       LEFT JOIN Users owner ON c.OwnerId = owner.UserId
-      WHERE c.UserId = ? OR c.OwnerId = ?
+      ${whereClause}
       ORDER BY c.StartDate DESC
-    `, [userId, userId]);
+    `, queryParams);
 
     // Calculate statistics
     const stats = {

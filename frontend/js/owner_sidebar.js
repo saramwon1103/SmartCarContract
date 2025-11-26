@@ -99,7 +99,7 @@
         <a href="profile.html" data-page="profile">
           <img src="../image/person.svg" class="icon" alt="Profile icon"> Profile
         </a>
-        <a href="admin_car.html" data-page="cars">
+        <a href="owner_car.html" data-page="cars">
           <img src="../image/car.svg" class="icon" alt="Cars icon"> Cars
         </a>
       </nav>
@@ -136,12 +136,18 @@
 
   // Handle logout
   function handleLogout() {
+    console.log('Logout clicked');
+    console.log('AuthManager available:', typeof AuthManager !== 'undefined');
+    
     // Use AuthManager if available
     if (typeof AuthManager !== 'undefined' && AuthManager.logout) {
+      console.log('Using AuthManager logout');
       AuthManager.logout();
     } else {
+      console.log('Using fallback logout');
       // Fallback: clear localStorage and redirect
-      localStorage.removeItem('currentUser');
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
       window.location.href = 'login.html';
     }
   }

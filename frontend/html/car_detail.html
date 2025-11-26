@@ -55,7 +55,7 @@
             <span><b>Steering:</b> <span id="carSteering">-</span></span>
             <span><b>Gasoline:</b> <span id="carGasoline">-</span></span>
           </div>
-          <h3 id="carPrice">$0.00 / day</h3>
+          <h3 id="carPrice">0.00 CPT / day</h3>
         </div>
 
         <div class="reviews">
@@ -82,7 +82,7 @@
       <div class="rent-box">
         <h3>Rent This Car</h3>
         <p>Starting from</p>
-        <h2 id="rentPriceDisplay">$0.00 / day</h2>
+        <h2 id="rentPriceDisplay">0.00 CPT / day</h2>
         <button id="rentNowBtn">Rent Now</button>
       </div>
     </div>
@@ -161,8 +161,8 @@
           document.getElementById('carGasoline').textContent  = '70L';
 
           const price = parseFloat(car.PriceRent || 0).toFixed(2);
-          document.getElementById('carPrice').textContent        = `$${price} / day`;
-          document.getElementById('rentPriceDisplay').textContent = `$${price} / day`;
+          document.getElementById('carPrice').textContent        = `${price} CPT / day`;
+          document.getElementById('rentPriceDisplay').textContent = `${price} CPT / day`;
 
           // Gallery
           const gallery = document.getElementById('carGallery');

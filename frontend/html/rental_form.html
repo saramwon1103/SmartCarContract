@@ -19,70 +19,6 @@
       color: #666;
       font-style: italic;
     }
-    .wallet-section {
-      background: #f8f9fa;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-    }
-    .wallet-status {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #dc3545;
-    }
-    .status-dot.connected {
-      background: #28a745;
-    }
-    .btn-wallet {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .btn-wallet:hover {
-      background: #0056b3;
-    }
-    .btn-wallet:disabled {
-      background: #6c757d;
-      cursor: not-allowed;
-    }
-    .token-info {
-      background: white;
-      border: 1px solid #dee2e6;
-      border-radius: 5px;
-      padding: 15px;
-      margin-top: 15px;
-    }
-    .price-conversion {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 10px 0;
-      padding: 10px;
-      background: #e7f3ff;
-      border-radius: 5px;
-    }
-    .error-message {
-      color: #dc3545;
-      font-size: 14px;
-      margin-top: 5px;
-    }
-    .success-message {
-      color: #28a745;
-      font-size: 14px;
-      margin-top: 5px;
-    }
     
     /* Signature Section Styles */
     #signature-section {
@@ -234,55 +170,12 @@
         </div>
       </div>
 
-      <!-- Wallet Section -->
-      <div class="wallet-section">
-        <h3>Wallet & Payment</h3>
-        
-        <div class="wallet-status">
-          <div class="status-dot" id="wallet-status-dot"></div>
-          <span id="wallet-status-text">Wallet not connected</span>
-        </div>
-        
-        <button type="button" class="btn-wallet" id="connect-wallet-btn">
-          Connect MetaMask Wallet
-        </button>
-        
-        <div id="wallet-info" style="display: none;">
-          <div class="token-info">
-            <h4>Account Information</h4>
-            <p><strong>Address:</strong> <span id="wallet-address"></span></p>
-            <p><strong>ETH Balance:</strong> <span id="eth-balance">0</span> ETH</p>
-            <p><strong>CPT Balance:</strong> <span id="cpt-balance">0</span> CPT</p>
-            
-            <div class="price-conversion">
-              <div>
-                <strong>Required CPT:</strong> <span id="total-cpt-needed">0</span> CPT
-              </div>
-              <div>
-                <strong>≈ ETH Cost:</strong> <span id="total-eth-cost">0</span> ETH
-              </div>
-            </div>
-            
-            <div id="insufficient-balance" style="display: none;">
-              <p class="error-message">⚠️ Insufficient CPT balance. You need to buy more tokens.</p>
-              <button type="button" class="btn-wallet" id="buy-tokens-btn">
-                Buy CPT Tokens
-              </button>
-            </div>
-            
-            <div id="sufficient-balance" style="display: none;">
-              <p class="success-message">✅ Sufficient CPT balance for this rental.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div>
         <label for="note">Additional Note</label>
         <textarea id="note" rows="4" placeholder="Enter special requests or remarks..."></textarea>
       </div>
 
-      <button type="submit" class="btn-submit">Tạo hợp đồng thuê</button>
+      <button type="submit" class="btn-submit">Create Contract Request</button>
       
       <!-- Signature Section (Hidden initially) -->
       <div id="signature-section" style="display: none; margin-top: 20px;">
@@ -385,9 +278,6 @@
 
     console.log('Loading car data for ID:', carId);
 
-    // Initialize wallet with Hardhat local
-    initializeWallet();
-
     // Try different API endpoints for car data
     console.log('Fetching car data from APIs...');
     Promise.all([
@@ -472,7 +362,11 @@
       const paymentAmount = document.getElementById('payment-amount');
 
         const toggleEndFields = () => {
+          console.log('toggleEndFields called, contract type:', contractType.value);
+          
           if(contractType.value === 'purchase'){
+            console.log('Setting up purchase mode');
+            
             // Disable date/time fields for purchase
             endDate.disabled = true;
             endTime.disabled = true;
@@ -484,13 +378,20 @@
             // Show payment options for purchase
             paymentOptionsRow.style.display = 'flex';
             paymentType.setAttribute('required', '');
+            // Set default payment type to avoid form validation error
+            if (!paymentType.value) {
+              paymentType.value = 'full';
+            }
             amountLabel.textContent = 'Purchase Price (CPT)';
             
             // Update amount to purchase price
             if (window.carPrices) {
               rentalAmount.value = window.carPrices.purchase.toFixed(2);
+              console.log('Updated purchase price to:', window.carPrices.purchase);
             }
-          } else {
+          } else if (contractType.value === 'rental') {
+            console.log('Setting up rental mode');
+            
             // Enable date/time fields for rental
             endDate.disabled = false;
             endTime.disabled = false;
@@ -502,14 +403,34 @@
             // Hide payment options for rental
             paymentOptionsRow.style.display = 'none';
             paymentType.removeAttribute('required');
+            paymentType.value = ''; // Clear payment type
             paymentAmountContainer.style.display = 'none';
             amountLabel.textContent = 'Rental Amount (CPT)';
             
             // Reset to rental price
             if (window.carPrices) {
               rentalAmount.value = window.carPrices.rental.toFixed(2);
+              console.log('Updated rental price to:', window.carPrices.rental);
             }
+          } else {
+            console.log('Contract type not selected, hiding payment options');
+            
+            // Default state - hide payment options
+            paymentOptionsRow.style.display = 'none';
+            paymentType.removeAttribute('required');
+            paymentType.value = ''; // Clear payment type
+            paymentAmountContainer.style.display = 'none';
+            
+            // Enable end date/time fields for rental
+            endDate.disabled = false;
+            endTime.disabled = false;
+            endDate.classList.remove('disabled-input');
+            endTime.classList.remove('disabled-input');
+            endDate.setAttribute('required','');
+            endTime.setAttribute('required','');
+            amountLabel.textContent = 'Rental Amount (CPT)';
           }
+          
           updateCPTCalculations();
         };
         
@@ -550,16 +471,18 @@
           }
         }
 
-        contractType.addEventListener('change', toggleEndFields);
+        // Ensure event listeners are properly attached
+        contractType.addEventListener('change', function() {
+          console.log('Contract type changed to:', this.value);
+          toggleEndFields();
+        });
+        
+        // Initial call to set up form properly
         toggleEndFields();
 
         formEl.addEventListener('submit', async (e) => {
           e.preventDefault();
-          if(!currentAccount){
-            alert('Please connect your wallet first!');
-            return;
-          }
-
+          
           // Collect form data
           const formData = {
             carId: carId,
@@ -569,7 +492,7 @@
             startTime: document.getElementById('start-time').value,
             endTime: document.getElementById('end-time').value,
             rentalAmount: document.getElementById('rental-amount').value,
-            walletAddress: currentAccount,
+            walletAddress: currentAccount || 'pending', // Allow creation without wallet initially
             note: document.getElementById('note').value
           };
           
@@ -588,39 +511,12 @@
             formData.endTime = null;
           }
 
-          // ✅ STEP 1: Check CPT Balance
-          const totalCPTNeeded = parseFloat(formData.rentalAmount);
-          if(cptBalance < totalCPTNeeded){
-            const buyMore = confirm(`❌ Insufficient CPT balance!
-            
-Required: ${totalCPTNeeded.toFixed(2)} CPT
-Available: ${cptBalance.toFixed(2)} CPT
-Need: ${(totalCPTNeeded - cptBalance).toFixed(2)} CPT more
-
-Would you like to buy more CPT tokens now?`);
-            
-            if (buyMore) {
-              await buyTokens();
-              return; // Stop here, user needs to buy tokens first
-            } else {
-              return;
-            }
-          }
-
-          // ✅ STEP 2: Approve CPT Token Spending
+          // ✅ Create Contract Request (No payment required at this stage)
           try {
-            await approveCPTSpending(totalCPTNeeded);
-          } catch (error) {
-            alert('Token approval failed: ' + error.message);
-            return;
-          }
-
-          // ✅ STEP 3: Create Rental Agreement
-          try {
-            await createRentalAgreement(formData);
+            await createContractRequest(formData);
           } catch(error){
             console.error(error);
-            alert('Contract creation failed: '+error.message);
+            alert('Contract request creation failed: '+error.message);
           }
         });
       })
@@ -678,106 +574,104 @@ Would you like to buy more CPT tokens now?`);
           // Add form submit handler for fallback mode
           formEl.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if(!currentAccount){
-              alert('Please connect your wallet first!');
-              return;
-            }
             alert('Car data could not be loaded. Please try again later.');
           });
         }, 3000);
       });
   })();
 
-  function initializeWallet(){
-    const connectBtn = document.getElementById('connect-wallet-btn');
-    const buyTokensBtn = document.getElementById('buy-tokens-btn');
-
-    if(typeof window.ethereum === 'undefined'){
-      connectBtn.textContent = 'Install MetaMask';
-      connectBtn.onclick = () => window.open('https://metamask.io/', '_blank');
-      return;
-    }
-
-    provider = new ethers.BrowserProvider(window.ethereum);
-    
-    // CPT Contract instance with minimal ERC20 ABI
-    const cptAbi = [
-      "function balanceOf(address owner) view returns (uint256)",
-      "function transfer(address to, uint256 amount) returns (bool)"
-    ];
-
-    connectBtn.addEventListener('click', connectWallet);
-    buyTokensBtn.addEventListener('click', buyTokens);
-  }
-
-  async function connectWallet(){
+  // ✅ Simple contract creation without wallet connection
+  async function createContractRequest(formData) {
     try {
-      const accounts = await window.ethereum.request({ method:'eth_requestAccounts' });
-      currentAccount = accounts[0];
+      console.log('Creating contract request:', formData);
       
-      // Get signer for contract interactions
-      const signer = await provider.getSigner();
-      cptContract = new ethers.Contract(CONTRACT_ADDRESSES.CPT_TOKEN, [
-        "function balanceOf(address owner) view returns (uint256)",
-        "function transfer(address to, uint256 amount) returns (bool)"
-      ], signer);
+      // Show loading state
+      const submitBtn = document.querySelector('.btn-submit');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating Contract Request...';
       
-      updateWalletUI();
-      await loadBalances();
-    } catch(error){
-      console.error(error);
-      alert('Failed to connect wallet: '+error.message);
-    }
-  }
-
-  function updateWalletUI(){
-    const statusDot = document.getElementById('wallet-status-dot');
-    const statusText = document.getElementById('wallet-status-text');
-    const walletInfo = document.getElementById('wallet-info');
-    const connectBtn = document.getElementById('connect-wallet-btn');
-    const addressEl = document.getElementById('wallet-address');
-
-    if(currentAccount){
-      statusDot.classList.add('connected');
-      statusText.textContent = 'Wallet Connected';
-      walletInfo.style.display = 'block';
-      connectBtn.style.display = 'none';
-      addressEl.textContent = currentAccount.substring(0,6)+'...'+currentAccount.substring(38);
-    } else {
-      statusDot.classList.remove('connected');
-      statusText.textContent = 'Wallet not connected';
-      walletInfo.style.display = 'none';
-      connectBtn.style.display = 'inline-block';
-    }
-  }
-
-  async function loadBalances(){
-    try {
-      // Get ETH balance using ethers.js
-      const ethBalanceWei = await provider.getBalance(currentAccount);
-      ethBalance = parseFloat(ethers.formatEther(ethBalanceWei));
-      document.getElementById('eth-balance').textContent = ethBalance.toFixed(4);
-
-      // Get CPT balance from backend API
-      const response = await fetch(`${API_BASE_URL}/wallet/cpt-balance/${currentAccount}`);
-      const data = await response.json();
+          // Calculate total price based on contract type
+          let totalPrice = parseFloat(formData.rentalAmount);
+          if (formData.contractType === 'purchase') {
+            if (formData.paymentType === 'quarterly') {
+              totalPrice = parseFloat(formData.quarterlyAmount || formData.rentalAmount);
+            } else {
+              totalPrice = parseFloat(formData.totalPurchasePrice || formData.rentalAmount);
+            }
+          }
+          
+          // Prepare contract data
+          const contractData = {
+            carId: formData.carId,
+            userId: getCurrentUserId(), // Get from auth
+            contractType: formData.contractType,
+            startDate: formData.startDate,
+            endDate: formData.contractType === 'purchase' ? null : formData.endDate,
+            startTime: formData.startTime,
+            endTime: formData.contractType === 'purchase' ? null : formData.endTime,
+            totalPrice: totalPrice,
+            paymentType: formData.paymentType || null,
+            quarters: formData.quarters || null,
+            quarterlyAmount: formData.quarterlyAmount || null,
+            totalPurchasePrice: formData.totalPurchasePrice || null,
+            note: formData.note || '',
+            status: 'Pending' // Initial status
+          };      console.log('Contract data to send:', contractData);
       
-      if (data.success) {
-        cptBalance = parseFloat(data.balance);
-        document.getElementById('cpt-balance').textContent = cptBalance.toFixed(2);
+      // Send to backend
+      const response = await fetch('http://localhost:3000/api/contracts/create-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contractData)
+      });
+      
+      const result = await response.json();
+      console.log('Contract creation response:', result);
+      
+      if (result.success) {
+        // Show success message with contract ID
+        alert(`✅ Contract request created successfully!
+        
+Contract ID: ${result.contractId}
+Status: Pending (waiting for owner confirmation)
+
+You will be notified when the owner confirms your request.
+Once confirmed, you can make payment in the "My Contracts" section.`);
+        
+        // Redirect to my contracts page
+        setTimeout(() => {
+          window.location.href = 'my_contracts.html';
+        }, 2000);
+        
       } else {
-        console.error('Failed to load CPT balance:', data.error);
-        cptBalance = 0;
-        document.getElementById('cpt-balance').textContent = '0.00';
+        throw new Error(result.error || 'Failed to create contract request');
       }
-
-      updateCPTCalculations();
-    } catch(error){
-      console.error('Error loading balances:', error);
+      
+    } catch (error) {
+      console.error('Error creating contract request:', error);
+      alert('Failed to create contract request: ' + error.message);
+    } finally {
+      // Restore button state
+      const submitBtn = document.querySelector('.btn-submit');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Contract Request';
+      }
     }
   }
-
-  // ✅ CRITICAL: Approve CPT token spending (Standard DApp flow)
+  
+  // Helper function to get current user ID
+  function getCurrentUserId() {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.UserId;
+    }
+    return null;
+  }
   async function approveCPTSpending(amount) {
     try {
       if (!cptContract || !currentAccount) {
@@ -1129,12 +1023,16 @@ The smart contract is now active on the blockchain!`;
     const totalCPT = rentalCPT;
     const totalETH = totalCPT * CPT_TOKEN_PRICE;
 
-    document.getElementById('total-cpt-needed').textContent = totalCPT.toFixed(2);
-    document.getElementById('total-eth-cost').textContent = totalETH.toFixed(6);
-
+    // Only update if elements exist
+    const totalCptEl = document.getElementById('total-cpt-needed');
+    const totalEthEl = document.getElementById('total-eth-cost');
     const insufficientEl = document.getElementById('insufficient-balance');
     const sufficientEl = document.getElementById('sufficient-balance');
-    if(currentAccount){
+
+    if (totalCptEl) totalCptEl.textContent = totalCPT.toFixed(2);
+    if (totalEthEl) totalEthEl.textContent = totalETH.toFixed(6);
+
+    if (currentAccount && insufficientEl && sufficientEl) {
       if(cptBalance >= totalCPT){
         insufficientEl.style.display = 'none';
         sufficientEl.style.display = 'block';

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 21, 2025 lúc 04:38 PM
+-- Thời gian đã tạo: Th10 26, 2025 lúc 05:24 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -58,7 +58,7 @@ CREATE TABLE `cars` (
 --
 
 INSERT INTO `cars` (`CarId`, `CarName`, `Brand`, `ModelYear`, `PriceRent`, `PriceBuy`, `Status`, `ImageURL`, `Description`, `OwnerId`) VALUES
-('C001', 'Yaris', 'Toyota', '2017-01-01', 15.00, 350.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreigriagse3mbh3qfp5qtg3iy73opnhe3qa5gnyhuidmdi77aoemqbu', 'Toyota Yaris 2017, xe nhỏ gọn, tiết kiệm nhiên liệu, phù hợp đi trong thành phố.', 'U001'),
+('C001', 'Yaris', 'Toyota', '2017-01-01', 15.00, 350.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreigriagse3mbh3qfp5qtg3iy73opnhe3qa5gnyhuidmdi77aoemqbu', 'Toyota Yaris 2017, xe nhỏ gọn, tiết kiệm nhiên liệu, phù hợp đi trong thành phố.', 'U038'),
 ('C002', 'Vios', 'Toyota', '2019-01-01', 18.00, 420.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreig3yxsusw3iym45egbknaknd4rvhubxzqkqh6hsuhiwq2tbnj2bo4', 'Toyota Vios, xe sedan phổ biến, tiết kiệm nhiên liệu, phù hợp gia đình.', 'U002'),
 ('C003', 'VF3', 'VinFast', '2023-01-01', 25.00, 650.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicc2pboosl7mgjjqlrbaafzz4w75cfb452z7drl4sxjquypkh47hm', 'VinFast VF3, xe điện hiện đại, nhiều tính năng thông minh, phù hợp đô thị.', 'U003'),
 ('C004', 'SW4', 'Toyota', '2020-01-01', 35.00, 950.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreibjlewcvinrdpsaxbycaswu33cqpxftqpvsofklhggkt3b4j4ozim', 'Toyota SW4, SUV mạnh mẽ, rộng rãi, phù hợp gia đình và đi đường dài.', 'U004'),
@@ -92,6 +92,31 @@ INSERT INTO `cars` (`CarId`, `CarName`, `Brand`, `ModelYear`, `PriceRent`, `Pric
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `contractnotifications`
+--
+
+CREATE TABLE `contractnotifications` (
+  `NotificationId` varchar(10) NOT NULL,
+  `ContractId` varchar(10) NOT NULL,
+  `UserId` varchar(10) NOT NULL,
+  `Type` enum('pending_confirmation','payment_due','contract_completed') NOT NULL,
+  `Title` varchar(255) NOT NULL,
+  `Message` text DEFAULT NULL,
+  `IsRead` tinyint(1) DEFAULT 0,
+  `CreatedAt` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `contractnotifications`
+--
+
+INSERT INTO `contractnotifications` (`NotificationId`, `ContractId`, `UserId`, `Type`, `Title`, `Message`, `IsRead`, `CreatedAt`) VALUES
+('NOT3818096', 'CT017', 'U038', 'pending_confirmation', 'New Contract Requires Confirmation', 'A new rent contract for Yaris (Toyota) requires your confirmation. Total: $15', 0, '2025-11-26 23:16:58'),
+('NOT4248473', 'CT016', 'U038', 'pending_confirmation', 'New Contract Requires Confirmation', 'A new rent contract for Yaris (Toyota) requires your confirmation. Total: $15', 0, '2025-11-26 23:24:08');
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `contracts`
 --
 
@@ -103,32 +128,42 @@ CREATE TABLE `contracts` (
   `Type` varchar(50) DEFAULT NULL,
   `StartDate` date DEFAULT NULL,
   `EndDate` date DEFAULT NULL,
+  `StartTime` time DEFAULT NULL,
+  `EndTime` time DEFAULT NULL,
   `TotalPrice` decimal(18,2) DEFAULT NULL,
+  `Note` text DEFAULT NULL,
   `Status` varchar(100) DEFAULT NULL,
-  `TXHash` varchar(255) DEFAULT NULL
+  `TXHash` varchar(255) DEFAULT NULL,
+  `OwnerConfirmTXHash` varchar(255) DEFAULT NULL,
+  `OwnerConfirmAt` datetime DEFAULT NULL,
+  `PaymentTXHash` varchar(255) DEFAULT NULL,
+  `PaymentCompletedAt` datetime DEFAULT NULL,
+  `PaidAmount` decimal(18,2) DEFAULT NULL,
+  `CreatedAt` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `contracts`
 --
 
-INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `TotalPrice`, `Status`, `TXHash`) VALUES
-('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', 75.00, 'Completed', '0xabc001'),
-('CT016', 'C001', 'U036', 'U001', 'Rent', '2025-11-21', '2025-11-22', 50.00, 'Pending', '0x12c4d59c2bfcce1bba9a05df4220002a7e7c708720736338a5973276fbd74eb3'),
-('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', 54.00, 'Pending', '0xabc002'),
-('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', 100.00, 'Completed', '0xabc003'),
-('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', 950.00, 'Completed', '0xabc004'),
-('CT05', 'C005', 'U025', 'U005', 'Buy', '2025-10-12', '2025-10-12', 1200.00, 'Pending', '0xabc005'),
-('CT06', 'C006', 'U026', 'U006', 'Rent', '2025-11-10', '2025-11-15', 150.00, 'Active', '0xabc006'),
-('CT07', 'C007', 'U027', 'U007', 'Rent', '2025-11-05', '2025-11-07', 165.00, 'Completed', '0xabc007'),
-('CT08', 'C008', 'U028', 'U008', 'Rent', '2025-11-12', '2025-11-16', 140.00, 'Active', '0xabc008'),
-('CT09', 'C020', 'U029', 'U020', 'Rent', '2025-11-15', '2025-11-18', 320.00, 'Active', '0xabc009'),
-('CT10', 'C014', 'U030', 'U014', 'Buy', '2025-11-01', '2025-11-01', 1350.00, 'Completed', '0xabc010'),
-('CT11', 'C009', 'U021', 'U009', 'Rent', '2025-11-17', '2025-11-20', 88.00, 'Active', '0xabc011'),
-('CT12', 'C012', 'U022', 'U012', 'Rent', '2025-11-18', '2025-11-22', 70.00, 'Active', '0xabc012'),
-('CT13', 'C015', 'U023', 'U015', 'Rent', '2025-11-16', '2025-11-23', 420.00, 'Active', '0xabc013'),
-('CT14', 'C018', 'U024', 'U018', 'Rent', '2025-11-20', '2025-11-25', 250.00, 'Pending', '0xabc014'),
-('CT15', 'C013', 'U025', 'U013', 'Buy', '2025-11-15', '2025-11-15', 680.00, 'Completed', '0xabc015');
+INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `StartTime`, `EndTime`, `TotalPrice`, `Note`, `Status`, `TXHash`, `OwnerConfirmTXHash`, `OwnerConfirmAt`, `PaymentTXHash`, `PaymentCompletedAt`, `PaidAmount`, `CreatedAt`) VALUES
+('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', NULL, NULL, 75.00, NULL, 'Completed', '0xabc001', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT016', 'C001', 'U036', 'U038', 'rent', '2025-11-26', '2025-11-28', '23:24:00', '21:00:00', 15.00, NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-26 23:24:08'),
+('CT017', 'C001', 'U036', 'U038', 'rent', '2025-11-26', '2025-11-28', '23:16:00', '22:00:00', 15.00, NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-26 23:16:58'),
+('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', NULL, NULL, 54.00, NULL, 'Pending', '0xabc002', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', NULL, NULL, 100.00, NULL, 'Completed', '0xabc003', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', NULL, NULL, 950.00, NULL, 'Completed', '0xabc004', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT05', 'C005', 'U025', 'U005', 'Buy', '2025-10-12', '2025-10-12', NULL, NULL, 1200.00, NULL, 'Pending', '0xabc005', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT06', 'C006', 'U026', 'U006', 'Rent', '2025-11-10', '2025-11-15', NULL, NULL, 150.00, NULL, 'Active', '0xabc006', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT07', 'C007', 'U027', 'U007', 'Rent', '2025-11-05', '2025-11-07', NULL, NULL, 165.00, NULL, 'Completed', '0xabc007', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT08', 'C008', 'U028', 'U008', 'Rent', '2025-11-12', '2025-11-16', NULL, NULL, 140.00, NULL, 'Active', '0xabc008', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT09', 'C020', 'U029', 'U020', 'Rent', '2025-11-15', '2025-11-18', NULL, NULL, 320.00, NULL, 'Active', '0xabc009', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT10', 'C014', 'U030', 'U014', 'Buy', '2025-11-01', '2025-11-01', NULL, NULL, 1350.00, NULL, 'Completed', '0xabc010', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT11', 'C009', 'U021', 'U009', 'Rent', '2025-11-17', '2025-11-20', NULL, NULL, 88.00, NULL, 'Active', '0xabc011', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT12', 'C012', 'U022', 'U012', 'Rent', '2025-11-18', '2025-11-22', NULL, NULL, 70.00, NULL, 'Active', '0xabc012', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT13', 'C015', 'U023', 'U015', 'Rent', '2025-11-16', '2025-11-23', NULL, NULL, 420.00, NULL, 'Active', '0xabc013', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT14', 'C018', 'U024', 'U018', 'Rent', '2025-11-20', '2025-11-25', NULL, NULL, 250.00, NULL, 'Pending', '0xabc014', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
+('CT15', 'C013', 'U025', 'U013', 'Buy', '2025-11-15', '2025-11-15', NULL, NULL, 680.00, NULL, 'Completed', '0xabc015', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25');
 
 -- --------------------------------------------------------
 
@@ -165,6 +200,23 @@ INSERT INTO `invoices` (`InvoiceId`, `ContractId`, `Amount`, `PaymentMethod`, `T
 ('IN13', 'CT13', 420.00, 'Crypto', '0xtx013', '2025-11-23 16:00:00'),
 ('IN14', 'CT14', 250.00, 'Crypto', '0xtx014', '2025-11-25 18:00:00'),
 ('IN15', 'CT15', 680.00, 'Crypto', '0xtx015', '2025-11-15 11:00:00');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `quarterlypayments`
+--
+
+CREATE TABLE `quarterlypayments` (
+  `PaymentId` int(11) NOT NULL,
+  `ContractId` varchar(10) NOT NULL,
+  `Quarter` int(11) NOT NULL CHECK (`Quarter` between 1 and 4),
+  `PaymentAmount` decimal(18,2) NOT NULL,
+  `TXHash` varchar(255) NOT NULL,
+  `UserWalletAddress` varchar(255) NOT NULL,
+  `PaymentDate` datetime DEFAULT current_timestamp(),
+  `CreatedAt` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -212,7 +264,8 @@ INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddre
 ('U035', 'Car Renter', 'user@test.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', NULL, 'User', '2025-11-20 12:09:34'),
 ('U036', 'Quyên Lê', 'quyen8a2113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 12:57:21'),
 ('U037', 'Quyên Lê', 'saramwon113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 13:21:38'),
-('U038', 'Quyên Lê Nguyễn Diễm', '22521228@gm.uit.edu.vn', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'Owner', '2025-11-21 21:50:10');
+('U038', 'Quyên Lê Nguyễn Diễm', '22521228@gm.uit.edu.vn', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'Owner', '2025-11-21 21:50:10'),
+('U039', 'Quyên', 'saramwon@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', NULL, NULL, 'Owner', '2025-11-24 21:30:24');
 
 -- --------------------------------------------------------
 
@@ -281,13 +334,24 @@ ALTER TABLE `cars`
   ADD KEY `OwnerId` (`OwnerId`);
 
 --
+-- Chỉ mục cho bảng `contractnotifications`
+--
+ALTER TABLE `contractnotifications`
+  ADD PRIMARY KEY (`NotificationId`),
+  ADD KEY `UserId` (`UserId`),
+  ADD KEY `contractnotifications_ibfk_1` (`ContractId`);
+
+--
 -- Chỉ mục cho bảng `contracts`
 --
 ALTER TABLE `contracts`
   ADD PRIMARY KEY (`ContractId`),
   ADD KEY `CarId` (`CarId`),
   ADD KEY `UserId` (`UserId`),
-  ADD KEY `OwnerId` (`OwnerId`);
+  ADD KEY `OwnerId` (`OwnerId`),
+  ADD KEY `idx_contracts_status` (`Status`),
+  ADD KEY `idx_contracts_owner_status` (`OwnerId`,`Status`),
+  ADD KEY `idx_contracts_user_status` (`UserId`,`Status`);
 
 --
 -- Chỉ mục cho bảng `invoices`
@@ -297,10 +361,46 @@ ALTER TABLE `invoices`
   ADD KEY `ContractId` (`ContractId`);
 
 --
+-- Chỉ mục cho bảng `quarterlypayments`
+--
+ALTER TABLE `quarterlypayments`
+  ADD PRIMARY KEY (`PaymentId`),
+  ADD UNIQUE KEY `unique_contract_quarter` (`ContractId`,`Quarter`),
+  ADD KEY `idx_quarterly_payments_contract` (`ContractId`),
+  ADD KEY `idx_quarterly_payments_date` (`PaymentDate`);
+
+--
 -- Chỉ mục cho bảng `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`UserId`);
+
+--
+-- AUTO_INCREMENT cho các bảng đã đổ
+--
+
+--
+-- AUTO_INCREMENT cho bảng `quarterlypayments`
+--
+ALTER TABLE `quarterlypayments`
+  MODIFY `PaymentId` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Các ràng buộc cho các bảng đã đổ
+--
+
+--
+-- Các ràng buộc cho bảng `contractnotifications`
+--
+ALTER TABLE `contractnotifications`
+  ADD CONSTRAINT `contractnotifications_ibfk_1` FOREIGN KEY (`ContractId`) REFERENCES `contracts` (`ContractId`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contractnotifications_ibfk_2` FOREIGN KEY (`UserId`) REFERENCES `users` (`UserId`);
+
+--
+-- Các ràng buộc cho bảng `quarterlypayments`
+--
+ALTER TABLE `quarterlypayments`
+  ADD CONSTRAINT `quarterlypayments_ibfk_1` FOREIGN KEY (`ContractId`) REFERENCES `contracts` (`ContractId`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

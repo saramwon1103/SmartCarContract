@@ -1,0 +1,202 @@
+/* Additional styles for owner confirmation workflow */
+
+/* Status badges with better colors */
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.active {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.terminated {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Action buttons in table */
+.btn-action {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-confirm {
+  background-color: #059669;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background-color: #047857;
+}
+
+.btn-pay {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-pay:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-view {
+  background-color: #6b7280;
+  color: white;
+}
+
+.btn-view:hover {
+  background-color: #4b5563;
+}
+
+/* New badge for pending contracts */
+.badge-new {
+  background-color: #ef4444;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Contract type styling */
+.contract-type.rent {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.contract-type.buy {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Enhanced detail view for owner confirmation */
+.owner-confirmation-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.owner-confirmation-section h5 {
+  color: #1f2937;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.confirmation-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeline-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.timeline-icon.pending {
+  background-color: #fbbf24;
+  color: white;
+}
+
+.timeline-icon.completed {
+  background-color: #10b981;
+  color: white;
+}
+
+.timeline-icon.waiting {
+  background-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.timeline-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.timeline-text.completed {
+  color: #059669;
+}
+
+.timeline-text.waiting {
+  color: #6b7280;
+}
+
+/* Loading states for buttons */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading:after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .btn-action {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .badge-new {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  
+  .timeline-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}

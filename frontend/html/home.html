@@ -11,7 +11,27 @@
   <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.6.0/css/all.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.js"></script>
+  <style>
+    /* Ensure sidebar is always visible */
+    .dashboard-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .sidebar {
+      display: flex !important;
+      flex-direction: column;
+      width: 250px;
+      min-width: 250px;
+      background: white;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    
+    .main {
+      flex: 1;
+      min-width: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard-container">

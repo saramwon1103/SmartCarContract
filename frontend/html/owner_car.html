@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Cars | Morent</title>
+    <link rel="stylesheet" href="../css/admin_dashboard.css" />
+    <link rel="stylesheet" href="../css/admin_car.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar will be loaded dynamically based on user role -->
+
+      <main class="main">
+        <header class="topbar">
+          <div class="search">
+            <input id="searchInput" type="text" placeholder="Search your cars by name, brand, or model" />
+            <span class="filter"><img src="../image/search.svg" alt="Search" class="icon"></span>
+          </div>
+          <div class="user-icons">
+            <img src="https://i.pravatar.cc/40" alt="avatar" class="avatar" />
+          </div>
+        </header>
+
+        <section class="content">
+          <!-- LEFT PANEL: Cars table -->
+          <div class="left-panel">
+            <div class="card cars-content-card">
+              <div class="header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3>My Cars Management</h3>
+                <div>
+                  <button id="refreshBtn" class="btn">Refresh</button>
+                  <button id="createBtn" class="btn btn-primary">Add Car</button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="carsTable">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Image</th>
+                      <th>Car Name</th>
+                      <th>Brand</th>
+                      <th>Model Year</th>
+                      <th>Price Rent</th>
+                      <th>Price Buy</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--gray-600);">Loading cars...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Summary stats and create form -->
+          <div class="right-panel">
+            <!-- Summary stats -->
+            <div class="card">
+              <h3>Summary</h3>
+              <div class="summary-stats">
+                <div class="stat-card">
+                  <span class="stat-label">Total Cars</span>
+                  <span class="stat-value" id="totalCarsCount">0</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Available</span>
+                  <span class="stat-value" id="availableCarsCount">0</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Rented</span>
+                  <span class="stat-value" id="rentedCarsCount">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- CREATE MODAL -->
+    <div id="createModal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Add New Car</h2>
+        <form id="createForm">
+          <div class="form-grid">
+            <div>
+              <label>Car Name:</label>
+              <input type="text" id="carName" required>
+            </div>
+            <div>
+              <label>Brand:</label>
+              <input type="text" id="brand" required>
+            </div>
+            <div>
+              <label>Model Year:</label>
+              <input type="number" id="modelYear" min="1900" max="2030" required>
+            </div>
+            <div>
+              <label>Price Rent (CPT):</label>
+              <input type="number" id="priceRent" step="0.01" min="0">
+            </div>
+            <div>
+              <label>Price Buy (CPT):</label>
+              <input type="number" id="priceBuy" step="0.01" min="0">
+            </div>
+            <div>
+              <label>Status:</label>
+              <select id="status">
+                <option value="available">Available</option>
+                <option value="rented">Rented</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="sold">Sold</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Image URL:</label>
+            <input type="url" id="imageURL">
+            <div id="imagePreview" style="display:none; margin-top:10px;">
+              <img id="previewImg" style="width:100px;height:auto;border-radius:4px;">
+            </div>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea id="description" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Car</button>
+            <button type="button" id="cancelCreate" class="btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div id="editModal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Edit Car</h2>
+        <form id="editForm">
+          <input type="hidden" id="editCarId">
+          <div class="form-grid">
+            <div>
+              <label>Car Name:</label>
+              <input type="text" id="editCarName" required>
+            </div>
+            <div>
+              <label>Brand:</label>
+              <input type="text" id="editBrand" required>
+            </div>
+            <div>
+              <label>Model Year:</label>
+              <input type="number" id="editModelYear" min="1900" max="2030" required>
+            </div>
+            <div>
+              <label>Price Rent (CPT):</label>
+              <input type="number" id="editPriceRent" step="0.01" min="0">
+            </div>
+            <div>
+              <label>Price Buy (CPT):</label>
+              <input type="number" id="editPriceBuy" step="0.01" min="0">
+            </div>
+            <div>
+              <label>Status:</label>
+              <select id="editStatus">
+                <option value="available">Available</option>
+                <option value="rented">Rented</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="sold">Sold</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Image URL:</label>
+            <input type="url" id="editImageURL">
+            <div id="editImagePreview" style="display:none; margin-top:10px;">
+              <img id="editPreviewImg" style="width:100px;height:auto;border-radius:4px;">
+            </div>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea id="editDescription" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Car</button>
+            <button type="button" id="cancelEdit" class="btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Load sidebar dynamically based on user role -->
+    <script src="../js/auth.js"></script>
+    <script>
+      // Load appropriate sidebar based on user role
+      document.addEventListener('DOMContentLoaded', () => {
+        const user = AuthManager.getCurrentUser();
+        if (user) {
+          if (user.Role === 'Owner') {
+            // Load owner sidebar
+            const script = document.createElement('script');
+            script.src = '../js/owner_sidebar.js';
+            document.head.appendChild(script);
+          } else if (user.Role === 'Admin') {
+            // Load admin sidebar
+            const script = document.createElement('script');
+            script.src = '../js/admin_sidebar.js';
+            document.head.appendChild(script);
+          } else {
+            // Load user sidebar
+            const script = document.createElement('script');
+            script.src = '../js/user_sidebar.js';
+            document.head.appendChild(script);
+          }
+        }
+      });
+    </script>
+    <script src="../js/owner_car.js"></script>
+  </body>
+</html>
