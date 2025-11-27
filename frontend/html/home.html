@@ -298,10 +298,24 @@
         }
 
         if (eligibility.hasWallet) {
-          // Show wallet info
+          // Get fresh wallet address from backend instead of local user object
+          this.displayWalletInfo(eligibility);
+        } else {
+          this.showConnectButton('Connect Wallet to Rent');
+        }
+      }
+
+      async displayWalletInfo(eligibility) {
+        try {
           const user = walletAuth.getCurrentUser();
-          const shortAddress = user.WalletAddress ? 
-            `${user.WalletAddress.slice(0, 6)}...${user.WalletAddress.slice(-4)}` : 'Unknown';
+          const response = await fetch(`http://localhost:3000/api/users/${user.UserId}/wallet`);
+          const walletData = await response.json();
+          
+          let shortAddress = 'Unknown';
+          if (walletData.success && walletData.wallet && walletData.wallet.WalletAddress) {
+            const address = walletData.wallet.WalletAddress;
+            shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+          }
           
           this.walletBalance.textContent = `${eligibility.cptBalance.toFixed(2)} CPT`;
           this.walletAddress.textContent = shortAddress;
@@ -311,7 +325,8 @@
           
           // Add status class based on eligibility
           this.walletInfo.className = eligibility.eligible ? 'wallet-info connected' : 'wallet-info warning';
-        } else {
+        } catch (error) {
+          console.error('Error loading wallet address:', error);
           this.showConnectButton('Connect Wallet to Rent');
         }
       }

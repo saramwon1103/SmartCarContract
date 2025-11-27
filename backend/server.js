@@ -913,7 +913,7 @@ app.put("/api/admin/contracts/:contractId/status", async (req, res) => {
     
     const updateQuery = `
       UPDATE Contracts 
-      SET Status = ?, UpdatedAt = NOW() 
+      SET Status = ? 
       WHERE ContractId = ?
     `;
     
@@ -962,7 +962,7 @@ app.put("/api/admin/contracts/:contractId/terminate", async (req, res) => {
     
     const terminateQuery = `
       UPDATE Contracts 
-      SET Status = 'Terminated', UpdatedAt = NOW() 
+      SET Status = 'Terminated' 
       WHERE ContractId = ?
     `;
     
@@ -1115,7 +1115,7 @@ app.get("/api/admin/contracts/search", async (req, res) => {
 // Register endpoint
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { fullname, email, password, role, phone } = req.body;
+    const { fullname, email, password, role } = req.body;
 
     // Validate required fields
     if (!fullname || !email || !password) {
@@ -1448,7 +1448,7 @@ app.get("/api/users/:userId/rental-eligibility", async (req, res) => {
 app.put("/api/users/:userId/profile", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { fullName, email, phone, walletAddress } = req.body;
+    const { fullName, email, walletAddress } = req.body;
     
     // Validate user exists
     const users = await query(`SELECT UserId FROM Users WHERE UserId = ?`, [userId]);
@@ -1484,10 +1484,11 @@ app.put("/api/users/:userId/profile", async (req, res) => {
       updateValues.push(email);
     }
     
-    if (phone) {
-      updateFields.push("Phone = ?");
-      updateValues.push(phone);
-    }
+    // Phone field doesn't exist in database schema
+    // if (phone) {
+    //   updateFields.push("Phone = ?");
+    //   updateValues.push(phone);
+    // }
     
     if (walletAddress) {
       // Validate wallet address format
@@ -1509,7 +1510,8 @@ app.put("/api/users/:userId/profile", async (req, res) => {
     }
     
     // Add timestamp and userId
-    updateFields.push("UpdatedAt = NOW()");
+    // Don't add UpdatedAt as it doesn't exist in Users table
+    // updateFields.push("UpdatedAt = NOW()");
     updateValues.push(userId);
     
     // Execute update
@@ -1523,7 +1525,7 @@ app.put("/api/users/:userId/profile", async (req, res) => {
     
     // Return updated user data
     const updatedUser = await query(
-      `SELECT UserId, FullName, Email, Role, Phone, WalletAddress, AvatarURL, CreatedAt, UpdatedAt 
+      `SELECT UserId, FullName, Email, Role, WalletAddress, AvatarURL, CreatedAt 
        FROM Users WHERE UserId = ?`,
       [userId]
     );
@@ -1611,7 +1613,7 @@ app.post("/api/contracts/onchain/created_event", async (req, res) => {
     if (!contractAddress || !txHash) return res.status(400).json({ error: "Missing contractAddress or txHash" });
 
     // Cập nhật record contract nếu đã tồn tại bằng TXHash
-    const result = await query(`UPDATE Contracts SET ContractAddress = ?, UpdatedAt = NOW() WHERE TXHash = ?`, [contractAddress, txHash]);
+    const result = await query(`UPDATE Contracts SET ContractAddress = ? WHERE TXHash = ?`, [contractAddress, txHash]);
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: "No contract found with given TXHash to attach contractAddress" });
     }
@@ -1640,7 +1642,7 @@ app.post("/api/contracts/onchain/activated", async (req, res) => {
 
     const updateQuery = `
       UPDATE Contracts
-      SET Status = 'Active', StartDate = COALESCE(?, StartDate), EndDate = COALESCE(?, EndDate), UpdatedAt = NOW()
+      SET Status = 'Active', StartDate = COALESCE(?, StartDate), EndDate = COALESCE(?, EndDate)
       WHERE ContractAddress = ? OR TXHash = ?
     `;
 
@@ -2249,6 +2251,269 @@ app.post("/api/contracts/create-request", async (req, res) => {
   }
 });
 
+// Owner action endpoint - approve or reject contract
+app.post("/api/contracts/:contractId/owner-action", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { action, ownerId } = req.body;
+
+    console.log('Owner action request:', { contractId, action, ownerId });
+
+    // Validate action
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Action must be either "approve" or "reject"'
+      });
+    }
+
+    // Check if contract exists and belongs to this owner
+    const contracts = await query(
+      `SELECT c.ContractId, c.Status, c.UserId, c.OwnerId, c.CarId, c.TotalPrice,
+              car.CarName, car.Brand,
+              u.FullName as UserName, u.Email as UserEmail
+       FROM Contracts c
+       JOIN Cars car ON c.CarId = car.CarId
+       JOIN Users u ON c.UserId = u.UserId
+       WHERE c.ContractId = ? AND c.OwnerId = ?`,
+      [contractId, ownerId]
+    );
+
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found or you are not the owner'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Check if contract is in Pending status
+    if (contract.Status !== 'Pending') {
+      return res.status(400).json({
+        success: false,
+        error: `Contract status is ${contract.Status}, expected Pending`
+      });
+    }
+
+    // Update contract status
+    const newStatus = action === 'approve' ? 'Active' : 'Rejected';
+    
+    await query('START TRANSACTION');
+    
+    try {
+      // Update contract status
+      await query(
+        `UPDATE Contracts SET Status = ? WHERE ContractId = ?`,
+        [newStatus, contractId]
+      );
+
+      // Create notification for user
+      const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+      const notificationTitle = action === 'approve' 
+        ? 'Contract Approved - Payment Required'
+        : 'Contract Rejected';
+      const notificationMessage = action === 'approve'
+        ? `Your ${contract.Type} contract for ${contract.CarName} has been approved. Please proceed to payment.`
+        : `Your ${contract.Type} contract for ${contract.CarName} has been rejected by the owner.`;
+
+      await query(
+        `INSERT INTO ContractNotifications (
+          NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
+        [
+          notificationId,
+          contractId,
+          contract.UserId,
+          action === 'approve' ? 'payment_required' : 'contract_rejected',
+          notificationTitle,
+          notificationMessage
+        ]
+      );
+
+      await query('COMMIT');
+
+      res.json({
+        success: true,
+        message: `Contract ${action}d successfully`,
+        contractId: contractId,
+        status: newStatus
+      });
+
+    } catch (innerError) {
+      await query('ROLLBACK');
+      throw innerError;
+    }
+
+  } catch (error) {
+    console.error('Error processing owner action:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Owner payment confirmation endpoint
+app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    const { ownerId, ownerWalletAddress, confirmationTxHash, gasUsed, blockNumber } = req.body;
+
+    console.log('Owner payment confirmation request:', { contractId, ownerId, ownerWalletAddress, confirmationTxHash });
+
+    // Check if contract exists and belongs to this owner
+    const contracts = await query(
+      `SELECT c.ContractId, c.Status, c.UserId, c.OwnerId, c.CarId, c.TotalPrice,
+              car.CarName, car.Brand,
+              u.FullName as UserName
+       FROM Contracts c
+       JOIN Cars car ON c.CarId = car.CarId
+       JOIN Users u ON c.UserId = u.UserId
+       WHERE c.ContractId = ? AND c.OwnerId = ?`,
+      [contractId, ownerId]
+    );
+
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found or you are not the owner'
+      });
+    }
+
+    const contract = contracts[0];
+
+    // Check if contract is in Paid status
+    if (contract.Status !== 'Paid') {
+      return res.status(400).json({
+        success: false,
+        error: `Contract status is ${contract.Status}, expected Paid`
+      });
+    }
+
+    await query('START TRANSACTION');
+    
+    try {
+      // Update contract status to Completed with blockchain confirmation details
+      await query(
+        `UPDATE Contracts 
+         SET Status = 'Completed', 
+             PaymentCompletedAt = NOW(),
+             OwnerConfirmTXHash = ?,
+             OwnerConfirmAt = NOW()
+         WHERE ContractId = ?`,
+        [confirmationTxHash || null, contractId]
+      );
+
+      // Create notification for user
+      const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+      const notificationMessage = confirmationTxHash ? 
+        `Your ${contract.Type} contract for ${contract.CarName} has been completed. Payment of ${contract.TotalPrice} CPT confirmed by owner on blockchain (TX: ${confirmationTxHash}).` :
+        `Your ${contract.Type} contract for ${contract.CarName} has been completed. Payment of ${contract.TotalPrice} CPT has been confirmed by the owner.`;
+      
+      await query(
+        `INSERT INTO ContractNotifications (
+          NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+        ) VALUES (?, ?, ?, 'contract_completed', ?, ?, 0, NOW())`,
+        [
+          notificationId,
+          contractId,
+          contract.UserId,
+          'Contract Completed',
+          notificationMessage
+        ]
+      );
+
+      // Generate PDF contract and upload to Pinata
+      let pdfGenerated = false;
+      let ipfsHash = null;
+      
+      try {
+        console.log('Generating PDF contract for completed contract:', contractId);
+        
+        // Prepare contract data for PDF generation
+        const pdfGenerator = new ContractPDFGenerator();
+        const contractPdfData = {
+          contractId: contract.ContractId,
+          contractType: contract.Type.toLowerCase(), // Fix: use contractType and lowercase
+          type: contract.Type,
+          carName: contract.CarName,
+          brand: contract.Brand,
+          userName: contract.UserName,
+          totalPrice: contract.TotalPrice,
+          status: 'Completed',
+          paymentCompletedAt: new Date().toISOString(),
+          ownerConfirmTxHash: confirmationTxHash,
+          startDate: contract.StartDate,
+          endDate: contract.EndDate,
+          createdAt: contract.CreatedAt,
+          contractAddress: 'N/A', // Add missing fields
+          txHash: confirmationTxHash || 'N/A'
+        };
+
+        // Generate PDF
+        const pdfResult = await pdfGenerator.generateContract(contractPdfData);
+        console.log('PDF generated:', pdfResult.fileName);
+
+        // Upload to Pinata
+        const pinataService = new PinataService();
+        const uploadResult = await pinataService.uploadContractPDF(pdfResult.filePath, {
+          contractId: contract.ContractId,
+          type: contract.Type,
+          carName: contract.CarName,
+          status: 'Completed',
+          uploadedAt: new Date().toISOString()
+        });
+
+        ipfsHash = uploadResult.ipfsHash;
+        pdfGenerated = true;
+        
+        console.log('PDF uploaded to IPFS successfully:', ipfsHash);
+
+        // Clean up temporary PDF file
+        const fs = await import('fs');
+        if (fs.existsSync(pdfResult.filePath)) {
+          fs.unlinkSync(pdfResult.filePath);
+          console.log('Temporary PDF file cleaned up');
+        }
+
+      } catch (pdfError) {
+        console.error('Error generating/uploading PDF:', pdfError);
+        // Don't fail the entire transaction if PDF generation fails
+        // Contract completion is more important than PDF
+      }
+
+      await query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Payment confirmation recorded successfully',
+        contractId: contractId,
+        status: 'Completed',
+        pdfGenerated: pdfGenerated,
+        ipfsHash: ipfsHash,
+        blockchainData: confirmationTxHash ? {
+          txHash: confirmationTxHash,
+          gasUsed,
+          blockNumber,
+          ownerWalletAddress
+        } : null
+      });
+
+    } catch (innerError) {
+      await query('ROLLBACK');
+      throw innerError;
+    }
+
+  } catch (error) {
+    console.error('Error confirming payment received:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Owner confirm pending contract
 app.post("/api/contracts/:contractId/confirm", async (req, res) => {
   try {
@@ -2481,7 +2746,7 @@ app.post("/api/contracts/:contractId/activate", async (req, res) => {
 app.post("/api/contracts/:contractId/payment", async (req, res) => {
   try {
     const { contractId } = req.params;
-    const { userWalletAddress, txHash, paymentAmount } = req.body;
+    const { userWalletAddress, txHash, paymentAmount, updateStatus } = req.body;
 
     if (!contractId || !userWalletAddress || !txHash) {
       return res.status(400).json({
@@ -2516,20 +2781,38 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
       });
     }
 
-    // Update contract status to Completed
+    // Determine new status - use 'Paid' instead of 'Completed' to wait for owner confirmation
+    const newStatus = updateStatus || 'Paid';
+    
+    // Update contract with payment details and new status
     await query(
       `UPDATE Contracts 
-       SET Status = 'Completed',
+       SET Status = ?,
            PaymentTXHash = ?,
            PaymentCompletedAt = NOW(),
            PaidAmount = ?
        WHERE ContractId = ?`,
-      [txHash, paidAmount, contractId]
+      [newStatus, txHash, paidAmount, contractId]
+    );
+
+    // Create notification for owner about payment received
+    const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+    await query(
+      `INSERT INTO ContractNotifications (
+        NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
+      ) VALUES (?, ?, ?, 'payment_received', ?, ?, 0, NOW())`,
+      [
+        notificationId,
+        contractId,
+        contract.OwnerId,
+        'Payment Received - Confirmation Required',
+        `User has paid ${paidAmount} CPT for contract ${contractId}. Please confirm payment received in your wallet.`
+      ]
     );
 
     res.json({
       success: true,
-      message: 'Payment completed successfully',
+      message: newStatus === 'Paid' ? 'Payment completed successfully. Waiting for owner confirmation.' : 'Payment completed successfully',
       contractId: contractId,
       newStatus: 'Completed',
       paidAmount: paidAmount
@@ -2881,8 +3164,10 @@ app.get('/api/users/:userId/contracts', async (req, res) => {
         car.ImageURL as CarImageURL,
         renter.FullName as RenterName,
         renter.Email as RenterEmail,
+        renter.WalletAddress as RenterAddress,
         owner.FullName as OwnerName,
-        owner.Email as OwnerEmail
+        owner.Email as OwnerEmail,
+        owner.WalletAddress as OwnerAddress
       FROM Contracts c
       LEFT JOIN Cars car ON c.CarId = car.CarId
       LEFT JOIN Users renter ON c.UserId = renter.UserId
@@ -3161,6 +3446,99 @@ app.post("/api/contracts/:contractId/complete-payment", async (req, res) => {
 
   } catch (error) {
     console.error('Complete payment error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Buy CPT tokens with ETH using CarPayToken contract
+app.post("/api/wallet/buy-cpt", async (req, res) => {
+  try {
+    const { userWalletAddress, ethAmount, txHash } = req.body;
+    
+    if (!userWalletAddress || !ethAmount || !txHash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: userWalletAddress, ethAmount, txHash'
+      });
+    }
+
+    // Verify the transaction on blockchain
+    const txReceipt = await blockchainService.getTransactionReceipt(txHash);
+    
+    if (!txReceipt || !txReceipt.status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Transaction failed or not found'
+      });
+    }
+    
+    // Verify transaction details
+    if (txReceipt.from.toLowerCase() !== userWalletAddress.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Transaction sender does not match user wallet'
+      });
+    }
+    
+    // Calculate tokens received based on contract logic
+    const tokenPrice = await blockchainService.getTokenPrice();
+    const tokensReceived = (ethers.parseEther(ethAmount.toString()) * ethers.parseEther('1')) / tokenPrice;
+    const cptAmount = parseFloat(ethers.formatEther(tokensReceived));
+    
+    console.log(`CPT Purchase verified: ${ethAmount} ETH -> ${cptAmount} CPT for ${userWalletAddress}`);
+    console.log(`Transaction: ${txHash}`);
+    
+    res.json({
+      success: true,
+      message: 'CPT tokens purchased successfully via CarPayToken contract',
+      transaction: {
+        ethAmount,
+        cptAmount,
+        tokenPriceWei: tokenPrice.toString(),
+        userWallet: userWalletAddress,
+        txHash
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying CPT purchase:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get current ETH to CPT exchange rate from CarPayToken contract
+app.get("/api/wallet/exchange-rate", async (req, res) => {
+  try {
+    // Get token price from CarPayToken contract
+    const tokenPrice = await blockchainService.getTokenPrice();
+    
+    if (!tokenPrice) {
+      throw new Error('Unable to fetch token price from contract');
+    }
+    
+    // tokenPrice is in wei (how much ETH for 1 CPT)
+    const ethForOneCPT = parseFloat(ethers.formatEther(tokenPrice));
+    const cptForOneETH = 1 / ethForOneCPT;
+    
+    res.json({
+      success: true,
+      tokenPriceWei: tokenPrice.toString(),
+      ethForOneCPT,
+      cptForOneETH,
+      rates: {
+        ethToCpt: cptForOneETH,
+        cptToEth: ethForOneCPT
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting exchange rate from contract:', error);
     res.status(500).json({
       success: false,
       error: error.message

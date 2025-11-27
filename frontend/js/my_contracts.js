@@ -1,16 +1,30 @@
 // My Contracts Management
 class MyContractsManager {
     constructor() {
-        // Get user from AuthManager instead of direct localStorage
-        this.currentUser = this.getCurrentUser();
+        // Get user from AuthManager for consistency
+        this.currentUser = window.AuthManager ? window.AuthManager.getCurrentUser() : this.getCurrentUserFallback();
         this.currentUserId = this.currentUser ? this.currentUser.UserId : null;
         this.contracts = [];
         this.filteredContracts = [];
         this.selectedContract = null;
+        
+        // Debug logging
+        console.log('MyContractsManager - Current User:', this.currentUser);
+        console.log('MyContractsManager - User Role:', this.currentUser?.Role);
+        console.log('MyContractsManager - User ID:', this.currentUserId);
+        
         this.init();
     }
 
     getCurrentUser() {
+        // Use AuthManager if available, fallback to localStorage
+        if (window.AuthManager) {
+            return window.AuthManager.getCurrentUser();
+        }
+        return this.getCurrentUserFallback();
+    }
+
+    getCurrentUserFallback() {
         const userStr = localStorage.getItem('user');
         return userStr ? JSON.parse(userStr) : null;
     }
@@ -161,6 +175,15 @@ class MyContractsManager {
                             '<button class="btn-small btn-pay" onclick="event.stopPropagation(); contractsManager.handlePayment(\'' + contract.ContractId + '\')" title="Make Payment">Pay</button>' : 
                             ''
                         }
+                        ${this.currentUser?.Role === 'Owner' && contract.Status?.toLowerCase() === 'pending' ?
+                            '<button class="btn-small btn-approve" onclick="event.stopPropagation(); contractsManager.handleOwnerApproval(\'' + contract.ContractId + '\', \'approve\')" title="Approve Contract">Approve</button>' +
+                            '<button class="btn-small btn-reject" onclick="event.stopPropagation(); contractsManager.handleOwnerApproval(\'' + contract.ContractId + '\', \'reject\')" title="Reject Contract">Reject</button>' :
+                            ''
+                        }
+                        ${this.currentUser?.Role === 'Owner' && contract.Status?.toLowerCase() === 'paid' ?
+                            '<button class="btn-small btn-confirm" onclick="event.stopPropagation(); contractsManager.handlePaymentConfirmation(\'' + contract.ContractId + '\')" title="Confirm Payment Received">Confirm</button>' :
+                            ''
+                        }
                     </div>
                 </td>
             </tr>
@@ -169,9 +192,15 @@ class MyContractsManager {
 
     selectContract(contractId) {
         this.selectedContract = this.contracts.find(c => c.ContractId === contractId);
+        console.log('Selected contract:', this.selectedContract);
         if (this.selectedContract) {
             this.displayContractDetails();
             this.highlightSelectedRow(contractId);
+            
+            // Update payment section after selecting contract
+            if (typeof updatePaymentSection === 'function') {
+                setTimeout(updatePaymentSection, 100); // Small delay to ensure DOM is updated
+            }
         }
     }
 
@@ -269,6 +298,11 @@ class MyContractsManager {
 
         // Update action buttons
         this.updateActionButtons(contract);
+        
+        // Update payment section after displaying details
+        if (typeof updatePaymentSection === 'function') {
+            setTimeout(updatePaymentSection, 100);
+        }
     }
 
     safeUpdateElement(elementId, updateFn) {
@@ -316,11 +350,14 @@ class MyContractsManager {
     updateActionButtons(contract) {
         const payBtn = document.getElementById('payBtn');
         const viewOnChainBtn = document.getElementById('viewOnChain');
+        const actionsContainer = document.querySelector('.contract-actions');
         
         if (payBtn) {
-            if (contract.Status?.toLowerCase() === 'active' && contract.Type?.toLowerCase() === 'rent') {
+            if (contract.Status?.toLowerCase() === 'active' && this.currentUser?.Role !== 'Owner') {
                 payBtn.style.display = 'block';
-                payBtn.textContent = 'Pay Installment';
+                payBtn.textContent = 'Make Payment';
+                // Remove existing click handlers and add new one
+                payBtn.onclick = () => this.handlePayment(contract.ContractId);
             } else {
                 payBtn.style.display = 'none';
             }
@@ -328,6 +365,37 @@ class MyContractsManager {
         
         if (viewOnChainBtn) {
             viewOnChainBtn.style.display = contract.TXHash ? 'block' : 'none';
+            viewOnChainBtn.onclick = () => this.viewOnBlockchain();
+        }
+
+        // Add owner-specific actions
+        if (this.currentUser?.Role === 'Owner' && actionsContainer) {
+            // Remove existing owner buttons
+            const existingOwnerBtns = actionsContainer.querySelectorAll('.owner-action-btn');
+            existingOwnerBtns.forEach(btn => btn.remove());
+
+            let ownerButtons = '';
+            
+            if (contract.Status?.toLowerCase() === 'pending') {
+                ownerButtons = `
+                    <button class="btn-primary owner-action-btn" onclick="contractsManager.handleOwnerApproval('${contract.ContractId}', 'approve')">
+                        Approve Contract
+                    </button>
+                    <button class="btn-secondary owner-action-btn" onclick="contractsManager.handleOwnerApproval('${contract.ContractId}', 'reject')">
+                        Reject Contract
+                    </button>
+                `;
+            } else if (contract.Status?.toLowerCase() === 'paid') {
+                ownerButtons = `
+                    <button class="btn-primary owner-action-btn" onclick="contractsManager.handlePaymentConfirmation('${contract.ContractId}')">
+                        Confirm Payment Received
+                    </button>
+                `;
+            }
+            
+            if (ownerButtons) {
+                actionsContainer.insertAdjacentHTML('beforeend', ownerButtons);
+            }
         }
     }
 
@@ -363,37 +431,45 @@ class MyContractsManager {
             this.contracts.find(c => c.ContractId === contractId) : 
             this.selectedContract;
             
-        if (!contract) return;
+        if (!contract) {
+            alert('No contract selected');
+            return;
+        }
+
+        // Set as selected contract for payment
+        this.selectedContract = contract;
+        this.displayContractDetails();
 
         try {
-            // Redirect to payment page or open payment modal
-            // For now, just show an alert
-            alert(`Payment functionality for contract ${contract.ContractId} will be implemented here.`);
-            
-            // Example of how to implement actual payment:
-            /*
-            const response = await fetch(`/api/payment/make/${contract.ContractId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: this.currentUserId,
-                    amount: dailyRate,
-                    paymentMethod: 'crypto'
-                })
-            });
-            
-            if (response.ok) {
-                this.loadContracts(); // Refresh contracts
-                alert('Payment successful!');
-            } else {
-                throw new Error('Payment failed');
+            // Check if user is logged in and has correct role
+            if (this.currentUser?.Role === 'Owner') {
+                alert('Owners cannot make payments. Only users can pay for contracts.');
+                return;
             }
-            */
+
+            // Check if contract is in Active status
+            if (contract.Status?.toLowerCase() !== 'active') {
+                alert(`Contract status is ${contract.Status}. Only Active contracts can be paid.`);
+                return;
+            }
+
+            // Call the MetaMask payment function if available
+            if (typeof makeContractPayment === 'function') {
+                console.log('Calling makeContractPayment for contract:', contract.ContractId);
+                await makeContractPayment();
+            } else {
+                // Fallback: show connect wallet message
+                alert('Please connect your MetaMask wallet first to make payment.');
+                
+                // Try to trigger wallet connection
+                if (typeof connectWallet === 'function') {
+                    await connectWallet();
+                }
+            }
+            
         } catch (error) {
             console.error('Payment error:', error);
-            alert('Payment failed. Please try again.');
+            alert('Payment failed: ' + error.message);
         }
     }
 
@@ -439,6 +515,79 @@ class MyContractsManager {
         console.log('Is logged in:', this.isLoggedIn());
         alert('Please login to view your contracts.');
         window.location.href = 'login.html';
+    }
+
+    async handleOwnerApproval(contractId, action) {
+        try {
+            const contract = this.contracts.find(c => c.ContractId === contractId);
+            if (!contract) {
+                alert('Contract not found');
+                return;
+            }
+
+            const confirmed = confirm(`${action === 'approve' ? 'Approve' : 'Reject'} contract ${contractId}?`);
+            if (!confirmed) return;
+
+            const response = await fetch(`http://localhost:3000/api/contracts/${contractId}/owner-action`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: action,
+                    ownerId: this.currentUserId
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`✅ Contract ${action}d successfully!`);
+                this.loadContracts(); // Reload contracts
+            } else {
+                throw new Error(result.error || `Failed to ${action} contract`);
+            }
+
+        } catch (error) {
+            console.error(`Owner ${action} error:`, error);
+            alert(`Failed to ${action} contract: ` + error.message);
+        }
+    }
+
+    async handlePaymentConfirmation(contractId) {
+        try {
+            const contract = this.contracts.find(c => c.ContractId === contractId);
+            if (!contract) {
+                alert('Contract not found');
+                return;
+            }
+
+            const confirmed = confirm(`Confirm that you have received payment of $${contract.TotalPrice} for contract ${contractId}?`);
+            if (!confirmed) return;
+
+            const response = await fetch(`http://localhost:3000/api/contracts/${contractId}/confirm-payment-received`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ownerId: this.currentUserId
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Payment confirmation completed! Contract is now completed.');
+                this.loadContracts(); // Reload contracts
+            } else {
+                throw new Error(result.error || 'Failed to confirm payment received');
+            }
+
+        } catch (error) {
+            console.error('Payment confirmation error:', error);
+            alert('Failed to confirm payment: ' + error.message);
+        }
     }
 }
 

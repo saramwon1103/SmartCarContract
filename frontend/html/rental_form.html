@@ -338,6 +338,10 @@
         purchase: purchasePriceCPT
       };
       
+      // Add date change listeners to calculate total price for rental
+      document.getElementById('start-date').addEventListener('change', calculateRentalTotal);
+      document.getElementById('end-date').addEventListener('change', calculateRentalTotal);
+      
       updateCPTCalculations();
 
       // Set default dates
@@ -405,13 +409,10 @@
             paymentType.removeAttribute('required');
             paymentType.value = ''; // Clear payment type
             paymentAmountContainer.style.display = 'none';
-            amountLabel.textContent = 'Rental Amount (CPT)';
+            amountLabel.textContent = 'Total Rental Amount (CPT)';
             
-            // Reset to rental price
-            if (window.carPrices) {
-              rentalAmount.value = window.carPrices.rental.toFixed(2);
-              console.log('Updated rental price to:', window.carPrices.rental);
-            }
+            // Calculate rental total based on dates
+            calculateRentalTotal();
           } else {
             console.log('Contract type not selected, hiding payment options');
             
@@ -599,6 +600,9 @@
             } else {
               totalPrice = parseFloat(formData.totalPurchasePrice || formData.rentalAmount);
             }
+          } else if (formData.contractType === 'rental') {
+            // For rental, use the calculated total from date range
+            totalPrice = parseFloat(formData.rentalAmount);
           }
           
           // Prepare contract data
@@ -671,6 +675,56 @@ Once confirmed, you can make payment in the "My Contracts" section.`);
       return user.UserId;
     }
     return null;
+  }
+  
+  // Function to calculate total rental price based on date range
+  function calculateRentalTotal() {
+    const contractType = document.getElementById('contract-type').value;
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const rentalAmountInput = document.getElementById('rental-amount');
+    
+    if (contractType === 'rental' && startDate && endDate && window.carPrices) {
+      try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Validate dates
+        if (end <= start) {
+          console.warn('End date must be after start date');
+          return;
+        }
+        
+        // Calculate number of days
+        const timeDifference = end.getTime() - start.getTime();
+        const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+        
+        // Calculate total price: (end date - start date) * price_rent
+        const dailyRate = window.carPrices.rental;
+        const totalPrice = daysDifference * dailyRate;
+        
+        console.log('Rental calculation:', {
+          startDate,
+          endDate,
+          days: daysDifference,
+          dailyRate,
+          totalPrice
+        });
+        
+        // Update the rental amount field
+        rentalAmountInput.value = totalPrice.toFixed(2);
+        
+        // Update CPT calculations
+        updateCPTCalculations();
+        
+        // Show calculation info to user
+        const amountLabel = document.getElementById('amount-label');
+        amountLabel.textContent = `Total Rental Amount (${daysDifference} days × ${dailyRate} CPT)`;
+        
+      } catch (error) {
+        console.error('Error calculating rental total:', error);
+      }
+    }
   }
   async function approveCPTSpending(amount) {
     try {

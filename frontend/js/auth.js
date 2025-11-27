@@ -21,6 +21,11 @@ const AuthManager = {
     clearSession() {
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
+        
+        // Clear wallet connection if clearWalletConnection function exists
+        if (typeof clearWalletConnection === 'function') {
+            clearWalletConnection();
+        }
     },
 
     // Logout

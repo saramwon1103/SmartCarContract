@@ -73,6 +73,20 @@ const CPT_TOKEN_ABI = [
     "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenPrice",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "buyTokens",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
   }
 ];
 
@@ -137,6 +151,9 @@ class BlockchainService {
       process.env.MAINNET_RPC_URL : BLOCKCHAIN_CONFIG.HARDHAT_RPC;
     
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.isBlockchainAvailable = false;
+    this.lastConnectionCheck = 0;
+    this.CONNECTION_CHECK_INTERVAL = 30000; // Check every 30 seconds
     
     // Admin wallet for backend operations
     this.adminWallet = new ethers.Wallet(BLOCKCHAIN_CONFIG.ADMIN_PRIVATE_KEY, this.provider);
@@ -153,6 +170,30 @@ class BlockchainService {
       CPT_TOKEN_ABI,
       this.adminWallet
     );
+  }
+
+  // Check if blockchain is available
+  async checkBlockchainAvailability() {
+    const now = Date.now();
+    if (now - this.lastConnectionCheck < this.CONNECTION_CHECK_INTERVAL) {
+      return this.isBlockchainAvailable;
+    }
+
+    try {
+      await this.provider.getBlockNumber();
+      if (!this.isBlockchainAvailable) {
+        console.log('✅ Blockchain connection restored');
+      }
+      this.isBlockchainAvailable = true;
+    } catch (error) {
+      if (this.isBlockchainAvailable) {
+        console.warn('⚠️ Blockchain node unavailable (Hardhat node not running)');
+      }
+      this.isBlockchainAvailable = false;
+    }
+
+    this.lastConnectionCheck = now;
+    return this.isBlockchainAvailable;
   }
 
   // Create rental agreement on blockchain
@@ -234,6 +275,12 @@ class BlockchainService {
   // Get CPT token balance
   async getCPTBalance(userAddress) {
     try {
+      // Check blockchain availability first
+      const isAvailable = await this.checkBlockchainAvailability();
+      if (!isAvailable) {
+        return '0'; // Return 0 silently if blockchain unavailable
+      }
+
       if (!ethers.isAddress(userAddress)) {
         throw new Error('Invalid address format');
       }
@@ -251,9 +298,44 @@ class BlockchainService {
       return ethers.formatUnits(balance, 18);
       
     } catch (error) {
-      console.error('Error getting CPT balance for', userAddress, ':', error.message);
+      // Only log if blockchain should be available
+      if (this.isBlockchainAvailable) {
+        console.error('Error getting CPT balance for', userAddress, ':', error.message);
+      }
       // Return 0 instead of throwing error to prevent API crashes
       return '0';
+    }
+  }
+
+  // Get token price from CarPayToken contract
+  async getTokenPrice() {
+    try {
+      const isAvailable = await this.checkBlockchainAvailability();
+      if (!isAvailable) {
+        return null;
+      }
+
+      const tokenPrice = await this.cptTokenContract.tokenPrice();
+      return tokenPrice;
+    } catch (error) {
+      console.error('Error getting token price:', error);
+      return null;
+    }
+  }
+
+  // Get transaction receipt
+  async getTransactionReceipt(txHash) {
+    try {
+      const isAvailable = await this.checkBlockchainAvailability();
+      if (!isAvailable) {
+        return null;
+      }
+
+      const receipt = await this.provider.getTransactionReceipt(txHash);
+      return receipt;
+    } catch (error) {
+      console.error('Error getting transaction receipt:', error);
+      return null;
     }
   }
 

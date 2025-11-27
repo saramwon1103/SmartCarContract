@@ -16,6 +16,7 @@
     if (existingSidebar) {
       console.log('Sidebar already exists, updating active state');
       setActivePage();
+      setupNavigation();
       setupLogout();
       return;
     }
@@ -43,6 +44,9 @@
         
         // Set active state based on current page
         setActivePage();
+        
+        // Setup navigation handlers
+        setupNavigation();
         
         // Setup logout handler
         setupLogout();
@@ -125,9 +129,24 @@
     }
     
     setActivePage();
+    setupNavigation();
     
     // Setup logout handler
     setupLogout();
+  }
+
+  // Setup navigation functionality
+  function setupNavigation() {
+    const navLinks = document.querySelectorAll('.sidebar .menu a[data-url]');
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.getAttribute('data-url');
+        if (url && url !== window.location.pathname.split('/').pop()) {
+          window.location.href = url;
+        }
+      });
+    });
   }
 
   // Setup logout functionality
