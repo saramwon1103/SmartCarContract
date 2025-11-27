@@ -238,7 +238,7 @@
     window.AuthManager = AuthManager;
   </script>
   <script>
-    const CPT_TOKEN_PRICE = 0.000287; // ETH per CPT token
+    const CPT_TOKEN_PRICE = 0.000287; // ETH per CPT token (287000000000000 wei)
     const CONTRACT_ADDRESSES = {
       CPT_TOKEN: '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Hardhat local deployed CPT token
       FACTORY: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'     // Hardhat local deployed Factory
@@ -247,11 +247,9 @@
     const API_BASE_URL = 'http://localhost:3000/api';
 
     let provider = null;
-  let currentAccount = null;
-  let cptContract = null;
-  let ethBalance = 0;
-  let cptBalance = 0;
-  let carData = null;
+    let currentAccount = null;
+    let cptContract = null;
+    let carData = null;
 
   (function () {
     const urlParams = new URLSearchParams(window.location.search);
@@ -726,116 +724,61 @@ Once confirmed, you can make payment in the "My Contracts" section.`);
       }
     }
   }
-  async function approveCPTSpending(amount) {
+  // Function to calculate ETH required for CPT amount
+  function calculateETHAmount(cptAmount) {
+    return cptAmount * CPT_TOKEN_PRICE;
+  }
+
+  // Function to buy CPT tokens with ETH automatically during payment
+  async function buyTokensWithETH(cptAmount) {
     try {
-      if (!cptContract || !currentAccount) {
-        throw new Error('Contract not initialized or wallet not connected');
+      if (!provider || !currentAccount) {
+        throw new Error('Please connect your wallet first');
       }
 
-      const submitBtn = document.querySelector('.btn-submit');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Approving Tokens...';
-
-      // Convert amount to proper units (18 decimals)
-      const amountInWei = ethers.parseUnits(amount.toString(), 18);
-
-      // Extended CPT contract ABI with approve function
       const signer = await provider.getSigner();
-      const cptContractWithApprove = new ethers.Contract(
+      const ethRequired = calculateETHAmount(cptAmount);
+      
+      console.log(`Buying ${cptAmount} CPT tokens for ${ethRequired} ETH`);
+
+      // CPT Token contract ABI
+      const cptTokenAbi = [
+        "function buyTokens() public payable",
+        "function balanceOf(address owner) view returns (uint256)",
+        "function tokenPrice() view returns (uint256)"
+      ];
+
+      const cptTokenContract = new ethers.Contract(
         CONTRACT_ADDRESSES.CPT_TOKEN,
-        [
-          "function balanceOf(address owner) view returns (uint256)",
-          "function transfer(address to, uint256 amount) returns (bool)",
-          "function approve(address spender, uint256 amount) returns (bool)",
-          "function allowance(address owner, address spender) view returns (uint256)"
-        ],
+        cptTokenAbi,
         signer
       );
 
-      // Check current allowance
-      const currentAllowance = await cptContractWithApprove.allowance(
-        currentAccount, 
-        CONTRACT_ADDRESSES.FACTORY
-      );
+      // Convert ETH to Wei
+      const ethInWei = ethers.parseEther(ethRequired.toString());
 
-      console.log('Current allowance:', ethers.formatUnits(currentAllowance, 18));
-      console.log('Required amount:', amount);
+      console.log('Calling buyTokens with ETH amount:', ethInWei.toString());
 
-      // If allowance is sufficient, skip approval
-      if (currentAllowance >= amountInWei) {
-        console.log('✅ Sufficient allowance already exists');
-        alert('✅ Token spending already approved!');
-        return;
-      }
-
-      // Request approval for factory contract to spend CPT tokens
-      console.log('Requesting approval for:', {
-        spender: CONTRACT_ADDRESSES.FACTORY,
-        amount: amountInWei.toString()
+      // Call buyTokens function with ETH payment
+      const tx = await cptTokenContract.buyTokens({
+        value: ethInWei
       });
 
-      const approveTx = await cptContractWithApprove.approve(
-        CONTRACT_ADDRESSES.FACTORY, // Factory contract can spend CPT
-        amountInWei                  // Amount to approve
-      );
-
-      alert(`🔄 Approval transaction submitted!
+      console.log('Buy tokens transaction submitted:', tx.hash);
       
-Hash: ${approveTx.hash}
-Please wait for confirmation...`);
-
-      // Wait for approval confirmation
-      const receipt = await approveTx.wait();
-
-      console.log('Approval confirmed:', receipt);
-
-      alert(`✅ CPT spending approved successfully!
-      
-Transaction Hash: ${receipt.hash}
-Approved Amount: ${amount} CPT
-Gas Used: ${receipt.gasUsed.toString()}
-
-You can now proceed with the rental agreement.`);
+      return {
+        tx: tx,
+        ethSpent: ethRequired,
+        cptReceived: cptAmount
+      };
 
     } catch (error) {
-      console.error('Approval failed:', error);
-      throw new Error(`Token approval failed: ${error.message}`);
-    } finally {
-      const submitBtn = document.querySelector('.btn-submit');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Tạo hợp đồng';
+      console.error('Error buying tokens:', error);
+      throw new Error(`Failed to buy CPT tokens: ${error.message}`);
     }
   }
 
-  async function buyTokens(){
-    try{
-      const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
-      const totalCPTNeeded = rentalCPT;
-      const cptToBuy = totalCPTNeeded - cptBalance;
-      const ethRequired = cptToBuy * CPT_TOKEN_PRICE;
 
-      if(ethBalance < ethRequired){
-        alert(`Insufficient ETH. Need ${ethRequired.toFixed(6)} ETH`);
-        return;
-      }
-
-      // Hardhat ERC20 mint simulation: user sends ETH to CPT contract
-      // Here we mock: call transfer function if implemented buyTokens
-      alert(`Buying ${cptToBuy.toFixed(2)} CPT for ${ethRequired.toFixed(6)} ETH`);
-      console.log('Buying tokens:', {cptToBuy, ethRequired});
-
-      // Mock update balances
-      cptBalance += cptToBuy;
-      ethBalance -= ethRequired;
-      document.getElementById('cpt-balance').textContent = cptBalance.toFixed(2);
-      document.getElementById('eth-balance').textContent = ethBalance.toFixed(4);
-      updateCPTCalculations();
-
-    } catch(error){
-      console.error(error);
-      alert('Failed to buy tokens: '+error.message);
-    }
-  }
 
   async function createRentalAgreement(formData){
     try {
@@ -843,54 +786,78 @@ You can now proceed with the rental agreement.`);
       const originalText = submitBtn.textContent;
       
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating Contract...';
+      submitBtn.textContent = 'Processing Payment...';
       
       console.log('Creating rental agreement with data:', formData);
 
-      // Option 1: Call backend API (current implementation)
-      const useBackend = true; // Set to false to use direct contract call
+      // ✅ STEP 1: Calculate ETH required for CPT amount
+      const cptAmount = parseFloat(formData.rentalAmount);
+      const ethRequired = calculateETHAmount(cptAmount);
       
-      if (useBackend) {
-        // Backend handles the contract interaction
-        const response = await fetch(`${API_BASE_URL}/rental/create`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to create rental agreement');
-        }
-        
-        // Success notification
-        alert(`🎉 Rental agreement created successfully!
-        
+      console.log(`Payment: ${cptAmount} CPT = ${ethRequired} ETH`);
+      
+      // ✅ STEP 2: Buy CPT tokens with ETH first
+      submitBtn.textContent = 'Buying CPT Tokens...';
+      
+      const tokenPurchase = await buyTokensWithETH(cptAmount);
+      
+      // Wait for token purchase confirmation
+      const tokenReceipt = await tokenPurchase.tx.wait();
+      
+      console.log('Token purchase confirmed:', tokenReceipt);
+      
+      alert(`✅ CPT Tokens purchased successfully!
+      
+🔗 Transaction Hash: ${tokenReceipt.hash}
+💰 ETH Spent: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+🪙 CPT Received: ${tokenPurchase.cptReceived} CPT
+⛽ Gas Used: ${tokenReceipt.gasUsed.toString()}
+
+Now creating rental agreement...`);
+      
+      // ✅ STEP 3: Create rental agreement using backend API
+      submitBtn.textContent = 'Creating Contract...';
+      
+      // Add token purchase info to form data
+      formData.tokenPurchaseTx = tokenReceipt.hash;
+      formData.ethSpent = tokenPurchase.ethSpent;
+      
+      const response = await fetch(`${API_BASE_URL}/rental/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create rental agreement');
+      }
+      
+      // Success notification
+      alert(`🎉 Rental agreement created successfully!
+      
+💰 PAYMENT COMPLETED:
+💳 ETH Paid: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+🪙 CPT Tokens: ${tokenPurchase.cptReceived} CPT
+🔗 Payment Tx: ${tokenReceipt.hash}
+
+📋 CONTRACT CREATED:
 Contract ID: ${result.data.contractId}
 Transaction Hash: ${result.data.txHash}
 Agreement Address: ${result.data.agreementAddress}
 Gas Used: ${result.data.gasUsed}
 
-${result.data.pdf ? `📄 CONTRACT PDF CREATED:
+${result.data.pdf ? `📄 CONTRACT PDF:
 IPFS Hash: ${result.data.pdf.ipfsHash}
 PDF URL: ${result.data.pdf.pinataUrl}
 File Size: ${Math.round(result.data.pdf.size / 1024)} KB` : ''}
 
-${result.data.metadata ? `📋 METADATA STORED:
-IPFS Hash: ${result.data.metadata.ipfsHash}
-Metadata URL: ${result.data.metadata.pinataUrl}` : ''}
+Payment completed and contract deployed to blockchain!`);
 
-The contract has been deployed to the blockchain and PDF stored on IPFS.`);
-
-        console.log('Rental agreement created:', result.data);
-        
-      } else {
-        // Option 2: Direct contract call from frontend
-        await createRentalContractDirect(formData);
-      }
+      console.log('Rental agreement created:', result.data);
       
       // Optionally redirect to contracts page
       const redirect = confirm('Would you like to view your contracts now?');
@@ -900,22 +867,36 @@ The contract has been deployed to the blockchain and PDF stored on IPFS.`);
       
     } catch (error) {
       console.error('Error creating rental agreement:', error);
+      
+      alert(`❌ Payment/Contract creation failed!
+      
+Error: ${error.message}
+
+Please try again or contact support if the issue persists.`);
+      
       throw error;
     } finally {
       const submitBtn = document.querySelector('.btn-submit');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Tạo hợp đồng';
+      submitBtn.textContent = 'Create Contract Request';
     }
   }
 
-  // Direct smart contract interaction (alternative to backend API)
+  // Direct smart contract interaction with ETH payment
   async function createRentalContractDirect(formData) {
     try {
       if (!provider || !currentAccount) {
         throw new Error('Please connect your wallet first');
       }
 
-      // Get signer for transaction
+      // ✅ STEP 1: Buy CPT tokens with ETH first
+      const cptAmount = parseFloat(formData.rentalAmount);
+      const tokenPurchase = await buyTokensWithETH(cptAmount);
+      const tokenReceipt = await tokenPurchase.tx.wait();
+      
+      console.log('✅ CPT tokens purchased:', tokenReceipt.hash);
+
+      // ✅ STEP 2: Get signer for contract creation
       const signer = await provider.getSigner();
       
       // Factory contract instance
@@ -942,41 +923,23 @@ The contract has been deployed to the blockchain and PDF stored on IPFS.`);
         depositAmount: '0'
       });
 
-      // ✅ STEP 1: Estimate gas first
-      const gasEstimate = await factoryContract.createAgreement.estimateGas(
-        currentAccount,
-        CONTRACT_ADDRESSES.CPT_TOKEN,
-        vehicleId,
-        rentalAmount,
-        ethers.parseUnits('0', 18) // No deposit
-      );
-
-      console.log('Estimated gas:', gasEstimate.toString());
-
-      // ✅ STEP 2: Call the createAgreement function
+      // ✅ STEP 3: Call the createAgreement function
       const tx = await factoryContract.createAgreement(
         currentAccount,                    // _user (current user)
         CONTRACT_ADDRESSES.CPT_TOKEN,     // _token (CPT token address)
         vehicleId,                        // _vehicleId (car ID as bytes32)
         rentalAmount,                     // _rentAmount
-        ethers.parseUnits('0', 18),       // _depositAmount (no deposit)
-        {
-          gasLimit: gasEstimate * 120n / 100n // 20% buffer
-        }
+        ethers.parseUnits('0', 18)        // _depositAmount (no deposit)
       );
 
-      console.log('Transaction submitted:', tx.hash);
-      alert(`🔄 Contract creation transaction submitted!
-      
-Hash: ${tx.hash}
-Please wait for confirmation...`);
+      console.log('Contract creation transaction submitted:', tx.hash);
 
-      // ✅ STEP 3: Wait for transaction confirmation
+      // ✅ STEP 4: Wait for transaction confirmation
       const receipt = await tx.wait();
       
-      console.log('Transaction confirmed:', receipt);
+      console.log('Contract creation confirmed:', receipt);
       
-      // ✅ STEP 4: Extract agreement address from events
+      // ✅ STEP 5: Extract agreement address from events
       let agreementAddress = 'Unknown';
       
       for (const log of receipt.logs) {
@@ -992,47 +955,46 @@ Please wait for confirmation...`);
             break;
           }
         } catch (error) {
-          // Skip unparseable logs
           continue;
         }
       }
 
       let alertMessage = `🎉 ${formData.contractType === 'purchase' ? 'Purchase' : 'Rental'} agreement created successfully!
 
-✅ Contract deployed to blockchain!
-📍 Agreement Address: ${agreementAddress}
-🔗 Transaction Hash: ${receipt.hash}
-⛽ Gas Used: ${receipt.gasUsed.toString()}
-📦 Block Number: ${receipt.blockNumber}
+💰 PAYMENT COMPLETED:
+💳 ETH Paid: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+🪙 CPT Tokens: ${tokenPurchase.cptReceived} CPT
+🔗 Payment Tx: ${tokenReceipt.hash}
 
-💰 ${formData.rentalAmount} CPT ${formData.contractType === 'purchase' ? 'payment' : 'rental fee'} locked`;
+✅ CONTRACT DEPLOYED:
+📍 Agreement Address: ${agreementAddress}
+🔗 Contract Tx: ${receipt.hash}
+⛽ Gas Used: ${receipt.gasUsed.toString()}
+📦 Block Number: ${receipt.blockNumber}`;
       
       if (formData.contractType === 'purchase') {
         if (formData.paymentType === 'quarterly') {
           alertMessage += `
 
-📋 PAYMENT PLAN DETAILS:
+📋 PAYMENT PLAN:
 🔢 Total Price: ${formData.totalPurchasePrice} CPT
-📅 Payment Terms: ${formData.quarters} quarters (${formData.quarters * 3} months)
+📅 Payment Terms: ${formData.quarters} quarters
 💰 Amount per Quarter: ${formData.quarterlyAmount} CPT
-✅ First Payment: ${formData.quarterlyAmount} CPT (Completed)
-⏳ Next Payments: ${formData.quarters - 1} remaining payments
-
-⚠️  IMPORTANT: You need to make quarterly payments manually. 
-    Contract status will be 'Active' until all payments completed.`;
+✅ First Payment: Completed
+⏳ Next Payments: ${formData.quarters - 1} remaining`;
         } else {
           alertMessage += `
-💰 Full Purchase Price: ${formData.totalPurchasePrice} CPT (Paid in full)`;
+💰 Full Purchase: ${formData.totalPurchasePrice} CPT (Paid)`;
         }
       }
       
       alertMessage += `
 
-The smart contract is now active on the blockchain!`;
+Payment completed and contract deployed!`;
       
       alert(alertMessage);
 
-      // ✅ STEP 5: Store contract info in database via API
+      // ✅ STEP 6: Store contract info in database
       try {
         await fetch(`${API_BASE_URL}/rental/store-contract`, {
           method: 'POST',
@@ -1049,10 +1011,10 @@ The smart contract is now active on the blockchain!`;
             endDate: formData.endDate,
             blockNumber: receipt.blockNumber,
             gasUsed: receipt.gasUsed.toString(),
-            // Lưu payment info vào note để tham khảo
-            note: formData.contractType === 'purchase' && formData.paymentType === 'quarterly' 
-              ? `Quarterly payment: ${formData.quarters} quarters, ${formData.quarterlyAmount} CPT per quarter, Total: ${formData.totalPurchasePrice} CPT`
-              : (formData.note || '')
+            // Store payment info
+            paymentTxHash: tokenReceipt.hash,
+            ethSpent: tokenPurchase.ethSpent,
+            note: formData.note || ''
           })
         });
       } catch (dbError) {
@@ -1063,38 +1025,29 @@ The smart contract is now active on the blockchain!`;
         txHash: receipt.hash,
         agreementAddress: agreementAddress,
         gasUsed: receipt.gasUsed.toString(),
-        blockNumber: receipt.blockNumber
+        blockNumber: receipt.blockNumber,
+        paymentTxHash: tokenReceipt.hash,
+        ethSpent: tokenPurchase.ethSpent
       };
 
     } catch (error) {
-      console.error('Direct contract call failed:', error);
+      console.error('Contract creation with ETH payment failed:', error);
       throw new Error(`Contract creation failed: ${error.message}`);
     }
   }
 
   function updateCPTCalculations(){
     const rentalCPT = parseFloat(document.getElementById('rental-amount').value || 0);
-    const totalCPT = rentalCPT;
-    const totalETH = totalCPT * CPT_TOKEN_PRICE;
+    const totalETH = calculateETHAmount(rentalCPT);
 
-    // Only update if elements exist
-    const totalCptEl = document.getElementById('total-cpt-needed');
-    const totalEthEl = document.getElementById('total-eth-cost');
-    const insufficientEl = document.getElementById('insufficient-balance');
-    const sufficientEl = document.getElementById('sufficient-balance');
-
-    if (totalCptEl) totalCptEl.textContent = totalCPT.toFixed(2);
-    if (totalEthEl) totalEthEl.textContent = totalETH.toFixed(6);
-
-    if (currentAccount && insufficientEl && sufficientEl) {
-      if(cptBalance >= totalCPT){
-        insufficientEl.style.display = 'none';
-        sufficientEl.style.display = 'block';
-      } else {
-        insufficientEl.style.display = 'block';
-        sufficientEl.style.display = 'none';
-      }
+    // Update amount label to show ETH equivalent
+    const amountLabel = document.getElementById('amount-label');
+    if (amountLabel && rentalCPT > 0) {
+      const baseText = amountLabel.textContent.split(' (')[0]; // Keep base text, remove old calculation
+      amountLabel.textContent = `${baseText} (≈ ${totalETH.toFixed(6)} ETH)`;
     }
+
+    console.log(`Payment calculation: ${rentalCPT} CPT = ${totalETH} ETH`);
   }
 
   // ===== SIGNATURE MANAGEMENT FUNCTIONS =====

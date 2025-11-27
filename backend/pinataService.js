@@ -18,29 +18,43 @@ export class PinataService {
    */
   async uploadContractPDF(filePath, metadata) {
     try {
+      console.log('📁 Starting PDF upload to Pinata...');
+      console.log('File path:', filePath);
+      console.log('Metadata:', metadata);
+      
       if (!fs.existsSync(filePath)) {
         throw new Error('PDF file not found: ' + filePath);
       }
 
-      console.log('Uploading PDF to Pinata:', filePath);
+      console.log('📄 File exists, reading file...');
+      const fileStats = fs.statSync(filePath);
+      console.log('File size:', fileStats.size, 'bytes');
 
       // Read file as buffer
       const fileBuffer = fs.readFileSync(filePath);
       const fileName = path.basename(filePath);
+      
+      console.log('📤 Creating File object...');
 
       // Create File object
       const file = new File([fileBuffer], fileName, { type: 'application/pdf' });
-
+      
+      console.log('🔑 Checking Pinata JWT...');
+      if (!process.env.PINATA_JWT) {
+        throw new Error('PINATA_JWT environment variable is not set');
+      }
+      
+      console.log('🚀 Uploading to Pinata...');
       // Upload file to Pinata
       const upload = await this.pinata.upload.file(file, {
         metadata: {
           name: `Contract_${metadata.contractId}`,
           keyvalues: {
             contractId: metadata.contractId,
-            contractType: metadata.contractType,
-            carId: metadata.carId,
-            contractAddress: metadata.contractAddress,
-            txHash: metadata.txHash,
+            contractType: metadata.contractType || 'unknown',
+            carId: metadata.carId || 'unknown',
+            contractAddress: metadata.contractAddress || 'N/A',
+            txHash: metadata.txHash || 'N/A',
             createdAt: new Date().toISOString(),
             fileType: 'contract-pdf'
           }
@@ -48,7 +62,7 @@ export class PinataService {
         groupId: process.env.PINATA_GROUP_ID // Optional: organize files in groups
       });
 
-      console.log('PDF uploaded successfully to Pinata:', upload);
+      console.log('✅ PDF uploaded successfully to Pinata:', upload);
 
       return {
         success: true,

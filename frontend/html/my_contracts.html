@@ -289,7 +289,7 @@
                   <div class="payment-info">
                     <p>You need to complete payment to activate this contract.</p>
                     <div class="payment-amount">
-                      Pay: <span id="payment-amount">$0.00</span> in CPT tokens
+                      Pay: <span id="payment-amount">0.00 CPT</span>
                     </div>
                   </div>
                   <button id="make-payment-btn" class="btn-pay" disabled>Connect Wallet to Pay</button>
@@ -311,7 +311,7 @@
                 <div id="owner-payment-confirmation-section" class="payment-section" style="display: none; background: #d1ecf1;">
                   <h5>💰 Payment Received Confirmation</h5>
                   <div class="payment-info">
-                    <p>User has paid <span id="paid-amount">$0.00</span> CPT. Please check your wallet and confirm payment received.</p>
+                    <p>User has paid <span id="paid-amount">0.00 CPT</span>. Please check your wallet and confirm payment received.</p>
                   </div>
                   <button id="confirm-payment-received-btn" class="btn-pay" style="background: #17a2b8;">Confirm Payment Received</button>
                 </div>
@@ -520,11 +520,66 @@
       let cptBalance = 0;
       
       const API_BASE_URL = 'http://localhost:3000/api';
+      const CPT_TOKEN_PRICE = 0.000287; // ETH per CPT token (from CarPayToken contract)
       
       const CONTRACT_ADDRESSES = {
         CPT_TOKEN: '0x5fbdb2315678afecb367f032d93f642f64180aa3', // Update with actual deployed address
         RENTAL_FACTORY: '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512' // Update with actual deployed address
       };
+      
+      // Helper function to calculate ETH required for CPT amount
+      function calculateETHAmount(cptAmount) {
+        return cptAmount * CPT_TOKEN_PRICE;
+      }
+      
+      // Function to buy CPT tokens with ETH automatically during payment
+      async function buyTokensWithETH(cptAmount) {
+        try {
+          if (!provider || !currentAccount) {
+            throw new Error('Please connect your wallet first');
+          }
+
+          const signer = await provider.getSigner();
+          const ethRequired = calculateETHAmount(cptAmount);
+          
+          console.log(`Buying ${cptAmount} CPT tokens for ${ethRequired} ETH`);
+
+          // CPT Token contract ABI
+          const cptTokenAbi = [
+            "function buyTokens() public payable",
+            "function balanceOf(address owner) view returns (uint256)",
+            "function tokenPrice() view returns (uint256)"
+          ];
+
+          const cptTokenContract = new ethers.Contract(
+            CONTRACT_ADDRESSES.CPT_TOKEN,
+            cptTokenAbi,
+            signer
+          );
+
+          // Convert ETH to Wei
+          const ethInWei = ethers.parseEther(ethRequired.toString());
+
+          console.log('Calling buyTokens with ETH amount:', ethInWei.toString());
+
+          // Call buyTokens function with ETH payment
+          const tx = await cptTokenContract.buyTokens({
+            value: ethInWei
+          });
+
+          console.log('Buy tokens transaction submitted:', tx.hash);
+          
+          return {
+            tx: tx,
+            ethSpent: ethRequired,
+            cptReceived: cptAmount
+          };
+
+        } catch (error) {
+          console.error('Error buying tokens:', error);
+          throw new Error(`Failed to buy CPT tokens: ${error.message}`);
+        }
+      }
       
       document.addEventListener('DOMContentLoaded', () => {
         console.log('My Contracts page loaded, initializing wallet...');
@@ -801,7 +856,7 @@
           } else if (contractStatus === 'Paid') {
             // Show payment received confirmation
             ownerPaymentConfirmationSection.style.display = 'block';
-            document.getElementById('paid-amount').textContent = `$${parseFloat(contract.TotalPrice || 0).toFixed(2)}`;
+            document.getElementById('paid-amount').textContent = `${parseFloat(contract.TotalPrice || 0).toFixed(2)} CPT`;
             setupOwnerPaymentConfirmationHandlers(contract);
           }
         } else {
@@ -811,17 +866,21 @@
             paymentSection.style.display = 'block';
             
             const paymentAmount = parseFloat(contract.TotalPrice || 0);
-            document.getElementById('payment-amount').textContent = `$${paymentAmount.toFixed(2)}`;
+            const ethRequired = calculateETHAmount(paymentAmount);
+            
+            document.getElementById('payment-amount').textContent = `${paymentAmount.toFixed(2)} CPT (≈ ${ethRequired.toFixed(6)} ETH)`;
             
             if (currentAccount) {
-              console.log('Wallet connected, checking CPT balance:', cptBalance, 'Required:', paymentAmount);
-              if (cptBalance >= paymentAmount) {
+              console.log('Wallet connected, checking ETH balance for CPT purchase');
+              
+              // Check if user has enough ETH to buy the required CPT
+              if (ethBalance >= ethRequired) {
                 makePaymentBtn.disabled = false;
-                makePaymentBtn.textContent = `Pay ${paymentAmount.toFixed(2)} CPT`;
+                makePaymentBtn.textContent = `Pay ${ethRequired.toFixed(6)} ETH`;
                 makePaymentBtn.style.background = '#059669';
               } else {
                 makePaymentBtn.disabled = true;
-                makePaymentBtn.textContent = `Insufficient CPT Balance (${cptBalance.toFixed(2)})`;
+                makePaymentBtn.textContent = `Insufficient ETH (Need ${ethRequired.toFixed(6)} ETH)`;
                 makePaymentBtn.style.background = '#ef4444';
               }
             } else {
@@ -845,59 +904,137 @@
         
         try {
           const paymentAmount = parseFloat(contract.TotalPrice);
+          const ethRequired = calculateETHAmount(paymentAmount);
           
-          const confirmed = confirm(`Complete payment of ${paymentAmount} CPT for contract ${contract.ContractId}?`);
+          const confirmed = confirm(`Complete payment of ${paymentAmount} CPT (≈ ${ethRequired.toFixed(6)} ETH) for contract ${contract.ContractId}?
+
+This will:
+1. Convert ${ethRequired.toFixed(6)} ETH to ${paymentAmount} CPT
+2. Send CPT to contract owner`);
           if (!confirmed) return;
           
           const makePaymentBtn = document.getElementById('make-payment-btn');
           makePaymentBtn.disabled = true;
           makePaymentBtn.textContent = 'Processing Payment...';
           
-          // First approve the CPT spending
-          const amountInWei = ethers.parseUnits(paymentAmount.toString(), 18);
-          const approveTx = await cptContract.approve(CONTRACT_ADDRESSES.RENTAL_FACTORY, amountInWei);
-          console.log('Approval transaction:', approveTx.hash);
+          // ✅ STEP 1: Buy CPT tokens with ETH first
+          makePaymentBtn.textContent = 'Buying CPT Tokens...';
           
-          await approveTx.wait();
+          const tokenPurchase = await buyTokensWithETH(paymentAmount);
           
-          // Transfer CPT to contract or owner (replace demo transaction)
+          // Wait for token purchase confirmation
+          const tokenReceipt = await tokenPurchase.tx.wait();
+          
+          console.log('Token purchase confirmed:', tokenReceipt);
+          
+          alert(`✅ CPT Tokens purchased successfully!
+
+🔗 Transaction Hash: ${tokenReceipt.hash}
+💰 ETH Spent: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+🪙 CPT Received: ${tokenPurchase.cptReceived} CPT
+⛽ Gas Used: ${tokenReceipt.gasUsed.toString()}
+
+Now sending CPT to contract owner...`);
+          
+          // ✅ STEP 2: Send ETH directly to owner (payment)
+          makePaymentBtn.textContent = 'Sending Payment to Owner...';
+          
+          // Get signer for ETH transaction
+          const signer = await provider.getSigner();
+          
           // Get owner wallet address from contract data
           const contractData = window.contractsManager?.selectedContract;
           if (!contractData || !contractData.OwnerAddress) {
             throw new Error('Cannot find owner wallet address');
           }
           
-          const transferTx = await cptContract.transfer(contractData.OwnerAddress, amountInWei);
-          console.log('CPT Transfer transaction:', transferTx.hash);
+          console.log('Sending ETH payment to owner:', contractData.OwnerAddress);
           
-          await transferTx.wait();
-          console.log('CPT payment completed successfully');
+          // Send ETH directly to owner as payment
+          const paymentTx = await signer.sendTransaction({
+            to: contractData.OwnerAddress,
+            value: ethers.parseEther(tokenPurchase.ethSpent.toString()),
+            gasLimit: 21000
+          });
           
-          // Call backend to complete payment
+          console.log('ETH payment transaction:', paymentTx.hash);
+          
+          const paymentReceipt = await paymentTx.wait();
+          console.log('ETH payment completed successfully');
+          
+          // ✅ STEP 3: Update backend
+          makePaymentBtn.textContent = 'Updating Contract Status...';
+          
+          const paymentData = {
+            userWalletAddress: currentAccount,
+            paymentTxHash: paymentTx.hash,
+            tokenPurchaseTxHash: tokenReceipt.hash,
+            paymentAmount: paymentAmount,
+            ethSpent: tokenPurchase.ethSpent,
+            updateStatus: 'Paid'
+          };
+          
+          console.log('Sending payment data to backend:', paymentData);
+          console.log('Contract ID:', contract.ContractId);
+          
+          // Validate required fields
+          if (!contract.ContractId) {
+            throw new Error('Contract ID is missing');
+          }
+          if (!currentAccount) {
+            throw new Error('Wallet address is missing');
+          }
+          if (!paymentTx.hash) {
+            throw new Error('Transaction hash is missing');
+          }
+          
           const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/payment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userWalletAddress: currentAccount,
-              txHash: transferTx.hash,
-              paymentAmount: paymentAmount,
-              updateStatus: 'Paid' // Update status to Paid after payment
-            })
+            body: JSON.stringify(paymentData)
           });
           
           const result = await response.json();
           
+          console.log('Backend response:', result);
+          console.log('Response status:', response.status);
+          
+          if (!response.ok) {
+            throw new Error(`Backend error (${response.status}): ${result.error || result.message || 'Unknown error'}`);
+          }
+          
           if (result.success) {
-            alert('✅ Payment completed successfully! Contract status updated to Paid. Waiting for owner confirmation.');
+            alert(`🎉 Payment completed successfully!
+
+💰 PAYMENT DETAILS:
+💳 ETH Spent: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+🪙 CPT Tokens Purchased: ${tokenPurchase.cptReceived} CPT
+💸 ETH Sent to Owner: ${tokenPurchase.ethSpent.toFixed(6)} ETH
+
+🔗 TRANSACTIONS:
+📤 Token Purchase: ${tokenReceipt.hash}
+💰 Payment to Owner: ${paymentTx.hash}
+
+📋 CONTRACT UPDATED:
+Contract ID: ${contract.ContractId}
+Status: Paid
+
+The car owner has received ${tokenPurchase.ethSpent.toFixed(6)} ETH payment.
+Waiting for owner confirmation...`);
+            
             window.contractsManager.loadContracts();
             await loadBalances();
           } else {
-            throw new Error(result.error || 'Payment failed');
+            throw new Error(result.error || 'Backend update failed');
           }
           
         } catch (error) {
           console.error('Payment error:', error);
-          alert('Payment failed: ' + error.message);
+          alert(`❌ Payment failed!
+
+Error: ${error.message}
+
+Please try again or contact support if the issue persists.`);
         } finally {
           updatePaymentSection();
         }
@@ -973,13 +1110,22 @@
       // Handle owner payment confirmation
       async function handleOwnerPaymentConfirmation(contract) {
         try {
+          console.log('Starting owner payment confirmation for contract:', contract.ContractId);
+          console.log('Current account:', currentAccount);
+          console.log('Provider:', !!provider);
+          
           // Check if wallet is connected
           if (!currentAccount) {
             alert('Please connect your MetaMask wallet first to confirm payment.');
             return;
           }
 
-          const confirmed = confirm(`Confirm that you have received payment of $${contract.TotalPrice} CPT for contract ${contract.ContractId}?\n\nThis will create a transaction on the blockchain.`);
+          if (!provider) {
+            alert('Wallet provider not found. Please refresh and try again.');
+            return;
+          }
+
+          const confirmed = confirm(`Confirm that you have received payment of ${contract.TotalPrice} CPT for contract ${contract.ContractId}?\n\nThis will create a transaction on the blockchain.`);
           if (!confirmed) return;
           
           const btn = document.getElementById('confirm-payment-received-btn');
@@ -987,6 +1133,7 @@
           btn.textContent = 'Processing on Blockchain...';
           
           try {
+            console.log('Creating blockchain transaction for owner confirmation...');
             // Create a blockchain transaction for owner confirmation
             const signer = await provider.getSigner();
             
@@ -998,16 +1145,18 @@
               gasLimit: 30000
             });
 
-            console.log('Owner confirmation transaction:', confirmationTx.hash);
+            console.log('Owner confirmation transaction submitted:', confirmationTx.hash);
             
             // Show transaction pending
             btn.textContent = 'Confirming on Blockchain...';
             
             // Wait for transaction confirmation
+            console.log('Waiting for transaction confirmation...');
             const receipt = await confirmationTx.wait();
             console.log('Confirmation transaction receipt:', receipt);
 
             // Call backend to update contract status
+            console.log('Calling backend to update contract status...');
             const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/confirm-payment-received`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

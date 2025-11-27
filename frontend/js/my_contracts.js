@@ -282,7 +282,7 @@ class MyContractsManager {
         });
         
         this.safeUpdateElement('detailTotalPrice', (el) => {
-            el.textContent = `$${parseFloat(contract.TotalPrice || 0).toFixed(2)}`;
+            el.textContent = `${parseFloat(contract.TotalPrice || 0).toFixed(2)} CPT`;
         });
 
         // Payment information (for rent contracts)
@@ -320,7 +320,7 @@ class MyContractsManager {
         const dailyRate = parseFloat(contract.TotalPrice) / totalDays;
         
         this.safeUpdateElement('detailInstallmentAmount', (el) => {
-            el.textContent = `$${dailyRate.toFixed(2)}/day`;
+            el.textContent = `${dailyRate.toFixed(2)} CPT/day`;
         });
         
         // For now, assume daily payments (this could be enhanced with actual payment schedule)

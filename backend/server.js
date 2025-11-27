@@ -2430,37 +2430,47 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
       
       try {
         console.log('Generating PDF contract for completed contract:', contractId);
+        console.log('Contract data for PDF:', {
+          contractId: contract.ContractId,
+          type: contract.Type,
+          carName: contract.CarName,
+          userName: contract.UserName
+        });
         
         // Prepare contract data for PDF generation
         const pdfGenerator = new ContractPDFGenerator();
         const contractPdfData = {
           contractId: contract.ContractId,
-          contractType: contract.Type.toLowerCase(), // Fix: use contractType and lowercase
-          type: contract.Type,
-          carName: contract.CarName,
-          brand: contract.Brand,
-          userName: contract.UserName,
-          totalPrice: contract.TotalPrice,
+          contractType: (contract.Type || 'rental').toLowerCase(),
+          type: contract.Type || 'rental',
+          carName: contract.CarName || 'Unknown Car',
+          brand: contract.Brand || 'Unknown Brand',
+          userName: contract.UserName || 'Unknown User',
+          totalPrice: contract.TotalPrice || 0,
           status: 'Completed',
           paymentCompletedAt: new Date().toISOString(),
-          ownerConfirmTxHash: confirmationTxHash,
+          ownerConfirmTxHash: confirmationTxHash || 'N/A',
           startDate: contract.StartDate,
           endDate: contract.EndDate,
           createdAt: contract.CreatedAt,
-          contractAddress: 'N/A', // Add missing fields
+          contractAddress: 'N/A',
           txHash: confirmationTxHash || 'N/A'
         };
 
+        console.log('Calling PDF generator...');
         // Generate PDF
         const pdfResult = await pdfGenerator.generateContract(contractPdfData);
-        console.log('PDF generated:', pdfResult.fileName);
+        console.log('PDF generated successfully:', pdfResult.fileName);
 
         // Upload to Pinata
+        console.log('Uploading to Pinata...');
         const pinataService = new PinataService();
         const uploadResult = await pinataService.uploadContractPDF(pdfResult.filePath, {
           contractId: contract.ContractId,
-          type: contract.Type,
-          carName: contract.CarName,
+          contractType: (contract.Type || 'rental').toLowerCase(),
+          carId: contract.CarId,
+          contractAddress: 'N/A',
+          txHash: confirmationTxHash || 'N/A',
           status: 'Completed',
           uploadedAt: new Date().toISOString()
         });
@@ -2469,6 +2479,7 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
         pdfGenerated = true;
         
         console.log('PDF uploaded to IPFS successfully:', ipfsHash);
+        console.log('Upload result:', uploadResult);
 
         // Clean up temporary PDF file
         const fs = await import('fs');
@@ -2478,7 +2489,20 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
         }
 
       } catch (pdfError) {
-        console.error('Error generating/uploading PDF:', pdfError);
+        console.error('Error generating/uploading PDF:');
+        console.error('Error type:', pdfError.name);
+        console.error('Error message:', pdfError.message);
+        console.error('Error stack:', pdfError.stack);
+        
+        // Check specific error types
+        if (pdfError.message.includes('PINATA_JWT')) {
+          console.error('Pinata JWT configuration error');
+        } else if (pdfError.message.includes('fs') || pdfError.message.includes('ENOENT')) {
+          console.error('File system error - check temp directory');
+        } else if (pdfError.message.includes('network')) {
+          console.error('Network error - check internet connection');
+        }
+        
         // Don't fail the entire transaction if PDF generation fails
         // Contract completion is more important than PDF
       }
@@ -2746,14 +2770,27 @@ app.post("/api/contracts/:contractId/activate", async (req, res) => {
 app.post("/api/contracts/:contractId/payment", async (req, res) => {
   try {
     const { contractId } = req.params;
-    const { userWalletAddress, txHash, paymentAmount, updateStatus } = req.body;
+    const { userWalletAddress, txHash, paymentTxHash, tokenPurchaseTxHash, paymentAmount, ethSpent, updateStatus } = req.body;
 
-    if (!contractId || !userWalletAddress || !txHash) {
+    // Accept either txHash or paymentTxHash for backwards compatibility
+    const transactionHash = paymentTxHash || txHash;
+
+    if (!contractId || !userWalletAddress || !transactionHash) {
       return res.status(400).json({
         success: false,
         error: 'Contract ID, wallet address, and transaction hash are required'
       });
     }
+
+    console.log('Payment request received:', {
+      contractId,
+      userWalletAddress,
+      paymentTxHash: transactionHash,
+      tokenPurchaseTxHash,
+      paymentAmount,
+      ethSpent,
+      updateStatus
+    });
 
     // Get contract details
     const contracts = await query(
@@ -2784,7 +2821,7 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
     // Determine new status - use 'Paid' instead of 'Completed' to wait for owner confirmation
     const newStatus = updateStatus || 'Paid';
     
-    // Update contract with payment details and new status
+    // Update contract with payment details and new status (using existing columns only)
     await query(
       `UPDATE Contracts 
        SET Status = ?,
@@ -2792,8 +2829,16 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
            PaymentCompletedAt = NOW(),
            PaidAmount = ?
        WHERE ContractId = ?`,
-      [newStatus, txHash, paidAmount, contractId]
+      [newStatus, transactionHash, paidAmount, contractId]
     );
+
+    // Log additional transaction info for debugging (optional)
+    if (tokenPurchaseTxHash) {
+      console.log(`Token purchase transaction for ${contractId}:`, tokenPurchaseTxHash);
+    }
+    if (ethSpent) {
+      console.log(`ETH spent for ${contractId}:`, ethSpent);
+    }
 
     // Create notification for owner about payment received
     const notificationId = `NOT${String(Date.now()).slice(-7)}`;
