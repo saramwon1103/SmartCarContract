@@ -129,18 +129,7 @@
   </head>
   <body>
     <div class="dashboard-container">
-      <!-- Fixed Sidebar -->
-      <aside class="sidebar">
-        <h2 class="logo">MORENT</h2>
-        <nav class="menu" id="sidebar-menu">
-          <!-- Menu will be populated based on user role -->
-        </nav>
-        <div class="sidebar-footer">
-          <a href="#" id="logoutBtn" class="logout-link">
-            <i class="fa-solid fa-right-from-bracket icon" style="color: #90A3BF;"></i> Log out
-          </a>
-        </div>
-      </aside>
+      <!-- Sidebar will be loaded by appropriate sidebar component based on user role -->
 
       <main class="main">
         <header class="topbar">
@@ -310,10 +299,26 @@
                 <!-- Owner Payment Confirmation Section -->
                 <div id="owner-payment-confirmation-section" class="payment-section" style="display: none; background: #d1ecf1;">
                   <h5>💰 Payment Received Confirmation</h5>
+                  
+                  <!-- Debug Panel -->
+                  <div id="debug-panel" class="wallet-status" style="margin: 10px 0; padding: 10px; background: #f0f8ff; border: 1px solid #cce7ff; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                    <strong>🔧 DEBUG INFO:</strong><br>
+                    <span id="debug-current-user">User: Loading...</span><br>
+                    <span id="debug-current-account">Account: Loading...</span><br>
+                    <span id="debug-provider">Provider: Loading...</span><br>
+                    <span id="debug-ethereum">Ethereum: Loading...</span><br>
+                    <button id="debug-refresh-btn" style="margin-top: 5px; padding: 5px 10px; font-size: 10px;">🔄 Refresh Status</button>
+                  </div>
+                  
                   <div class="payment-info">
                     <p>User has paid <span id="paid-amount">0.00 CPT</span>. Please check your wallet and confirm payment received.</p>
+                    <div class="wallet-status" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                      <strong>Wallet Status:</strong> <span id="wallet-status">Checking...</span><br>
+                      <strong>Connected Address:</strong> <span id="wallet-address">-</span>
+                    </div>
                   </div>
-                  <button id="confirm-payment-received-btn" class="btn-pay" style="background: #17a2b8;">Confirm Payment Received</button>
+                  <button id="connect-wallet-owner-btn" class="btn-pay" style="background: #ffc107; color: #000; display: none; margin-right: 10px;">🔗 Connect MetaMask</button>
+                  <button id="confirm-payment-received-btn" class="btn-pay" style="background: #17a2b8;">✅ Confirm Payment Received</button>
                 </div>
                 
                 <div class="contract-actions">
@@ -341,72 +346,54 @@
       document.addEventListener('DOMContentLoaded', () => {
         console.log('My Contracts page loaded');
         
-        // Load appropriate menu based on user role
+        // Load appropriate sidebar based on user role
         const user = AuthManager.getCurrentUser();
-        const sidebarMenu = document.getElementById('sidebar-menu');
         
         if (user && user.Role === 'Owner') {
-          // Owner menu
-          sidebarMenu.innerHTML = `
-            <a href="#" data-page="home" data-url="owner_home.html">
-              <img src="../image/home.svg" class="icon" alt="Home icon"> Home
-            </a>
-            <a href="#" data-page="cars" data-url="owner_car.html">
-              <img src="../image/car.svg" class="icon" alt="Cars icon"> My Cars
-            </a>
-            <a href="#" data-page="contracts" data-url="my_contracts.html" class="active">
-              <img src="../image/heart.svg" class="icon" alt="Contracts icon"> Contracts
-            </a>
-            <a href="#" data-page="profile" data-url="profile.html">
-              <img src="../image/person.svg" class="icon" alt="Profile icon"> Profile
-            </a>
-          `;
+          console.log('Loading owner sidebar...');
+          // Load owner sidebar component
+          const script = document.createElement('script');
+          script.src = '../js/owner_sidebar.js';
+          script.onload = () => {
+            console.log('Owner sidebar loaded successfully');
+          };
+          document.head.appendChild(script);
+        } else if (user && user.Role === 'User') {
+          console.log('Loading user sidebar...');
+          // Load user sidebar component
+          const script = document.createElement('script');
+          script.src = '../js/user_sidebar.js';
+          script.onload = () => {
+            console.log('User sidebar loaded successfully');
+          };
+          document.head.appendChild(script);
         } else {
-          // User menu
-          sidebarMenu.innerHTML = `
-            <a href="#" data-page="home" data-url="home.html">
-              <img src="../image/home.svg" class="icon" alt="Home icon"> Home
-            </a>
-            <a href="#" data-page="contracts" data-url="my_contracts.html" class="active">
-              <img src="../image/car.svg" class="icon" alt="Contracts icon"> My Contracts
-            </a>
-            <a href="#" data-page="profile" data-url="profile.html">
-              <img src="../image/person.svg" class="icon" alt="Profile icon"> Profile
-            </a>
-          `;
+          console.log('No user or unknown role, loading default sidebar');
         }
         
-        // Setup navigation
-        const navLinks = document.querySelectorAll('.sidebar .menu a[data-url]');
-        navLinks.forEach(link => {
-          link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const url = this.getAttribute('data-url');
-            if (url && url !== window.location.pathname.split('/').pop()) {
-              window.location.href = url;
-            }
-          });
-        });
-        
-        // Setup logout
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-          logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Clear wallet connection before logout
-            clearWalletConnection();
-            
-            if (typeof AuthManager !== 'undefined' && AuthManager.logout) {
-              AuthManager.logout();
-            } else {
-              localStorage.removeItem('user');
-              localStorage.removeItem('isLoggedIn');
-              window.location.href = 'login.html';
-            }
-          });
-        }
+        // Initialize contracts manager after sidebar is loaded
+        setTimeout(() => {
+          initializeContractsPage();
+        }, 1000); // Tăng thời gian để đảm bảo sidebar load xong
       });
+      
+      function initializeContractsPage() {
+        console.log('Initializing contracts page...');
+        
+        // Initialize wallet connection
+        if (typeof window.ethereum !== 'undefined') {
+          console.log('MetaMask detected, initializing wallet...');
+          provider = new ethers.BrowserProvider(window.ethereum);
+          
+          // Check for existing connection
+          checkExistingConnection();
+        } else {
+          console.log('MetaMask not detected');
+        }
+        
+        // This function will be called after sidebar is loaded
+        // Any additional initialization can be added here
+      }
       
       // Clear wallet connection
       function clearWalletConnection() {
@@ -519,6 +506,20 @@
       let ethBalance = 0;
       let cptBalance = 0;
       
+      // Track processed payment transactions to prevent duplicates
+      const processedPayments = new Set();
+      
+      // Function to sync current account across variables
+      function setCurrentAccount(account) {
+        currentAccount = account;
+        window.currentAccount = account;
+        console.log('Current account set to:', account);
+      }
+      
+      function getCurrentAccount() {
+        return currentAccount || window.currentAccount;
+      }
+      
       const API_BASE_URL = 'http://localhost:3000/api';
       const CPT_TOKEN_PRICE = 0.000287; // ETH per CPT token (from CarPayToken contract)
       
@@ -527,7 +528,27 @@
         RENTAL_FACTORY: '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512' // Update with actual deployed address
       };
       
-      // Helper function to calculate ETH required for CPT amount
+      // Helper function to calculate ETH required for CPT amount from contract
+      async function calculateETHAmountFromContract(cptAmount) {
+        try {
+          // Get exchange rate from backend API (which gets from CarPayToken contract)
+          const rateResponse = await fetch(`${API_BASE_URL}/wallet/exchange-rate`);
+          const rateData = await rateResponse.json();
+          
+          if (!rateData.success) {
+            throw new Error('Failed to get exchange rate from CarPayToken contract');
+          }
+          
+          const ethForOneCPT = rateData.ethForOneCPT;
+          return cptAmount * ethForOneCPT;
+        } catch (error) {
+          console.error('Error getting exchange rate:', error);
+          // Fallback to static price if API fails
+          return cptAmount * CPT_TOKEN_PRICE;
+        }
+      }
+      
+      // Helper function to calculate ETH required for CPT amount (legacy)
       function calculateETHAmount(cptAmount) {
         return cptAmount * CPT_TOKEN_PRICE;
       }
@@ -593,13 +614,6 @@
         console.log('Initializing wallet connection...');
         const connectBtn = document.getElementById('connect-wallet-btn');
         const buyCptBtn = document.getElementById('buy-cpt-btn');
-        const makePaymentBtn = document.getElementById('make-payment-btn');
-        
-        console.log('Wallet buttons found:', {
-          connectBtn: !!connectBtn,
-          buyCptBtn: !!buyCptBtn,
-          makePaymentBtn: !!makePaymentBtn
-        });
         
         if (!connectBtn) {
           console.error('Connect wallet button not found!');
@@ -622,10 +636,8 @@
           buyCptBtn.addEventListener('click', showBuyCptModal);
         }
         
-        if (makePaymentBtn) {
-          console.log('Setting up makePaymentBtn click handler');
-          makePaymentBtn.addEventListener('click', makeContractPayment);
-        }
+        // Setup payment button handler immediately
+        setupPaymentButtonHandler();
         
         // Check if already connected
         checkExistingConnection();
@@ -644,7 +656,15 @@
           if (accounts.length > 0) {
             const connectedWallet = accounts[0].toLowerCase();
             
-            // Kiểm tra xem user có wallet trong database không
+            // For Owners, allow auto-connect with any wallet
+            if (currentUser.Role === 'Owner') {
+              currentAccount = accounts[0];
+              await setupWalletConnection();
+              console.log('Auto-connected owner wallet:', currentAccount);
+              return;
+            }
+            
+            // For Users, check if wallet matches database
             try {
               const response = await fetch(`http://localhost:3000/api/users/${currentUser.UserId}/wallet`);
               const walletData = await response.json();
@@ -678,14 +698,20 @@
       async function connectWallet() {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          currentAccount = accounts[0];
+          setCurrentAccount(accounts[0]);
           
-          // Save wallet to database
-          await saveWalletToDatabase(currentAccount);
+          const currentUser = AuthManager.getCurrentUser();
+          
+          // For Users, save wallet to database
+          // For Owners, just connect without saving (they can use any wallet for confirmation)
+          if (currentUser && currentUser.Role === 'User') {
+            await saveWalletToDatabase(currentAccount);
+          }
           
           await setupWalletConnection();
           
-          console.log('Wallet connected and saved:', currentAccount);
+          console.log('Wallet connected:', currentAccount);
+          console.log('User role:', currentUser?.Role);
         } catch (error) {
           console.error('Error connecting wallet:', error);
           alert('Failed to connect wallet: ' + error.message);
@@ -738,8 +764,13 @@
           updateWalletUI();
           await loadBalances();
           
+          // Setup payment button handler if not already done
+          setupPaymentButtonHandler();
+          
           // Update payment section after wallet connection
-          setTimeout(updatePaymentSection, 200);
+          setTimeout(() => {
+            updatePaymentSection();
+          }, 200);
         } catch (error) {
           console.error('Error setting up wallet connection:', error);
         }
@@ -822,221 +853,229 @@
       function updatePaymentSection() {
         const makePaymentBtn = document.getElementById('make-payment-btn');
         const paymentSection = document.getElementById('payment-section');
-        const ownerConfirmationSection = document.getElementById('owner-confirmation-section');
-        const ownerPaymentConfirmationSection = document.getElementById('owner-payment-confirmation-section');
         
         if (!makePaymentBtn || !paymentSection) return;
         
-        // Get current contract from contracts manager
         const contract = window.contractsManager?.selectedContract;
         const currentUser = window.AuthManager?.getCurrentUser();
-        
-        console.log('updatePaymentSection - Contract:', contract);
-        console.log('updatePaymentSection - User:', currentUser);
+        const account = getCurrentAccount();
         
         if (!contract || !currentUser) return;
         
-        // Hide all sections initially
+        // Hide payment section initially
         paymentSection.style.display = 'none';
-        ownerConfirmationSection.style.display = 'none';
-        ownerPaymentConfirmationSection.style.display = 'none';
         
-        // Check user role and contract status to show appropriate section
-        const isOwner = currentUser.Role === 'Owner';
-        const contractStatus = contract.Status;
-        
-        console.log('updatePaymentSection - Status:', contractStatus, 'User role:', currentUser.Role, 'Is Owner:', isOwner);
-        
-        if (isOwner) {
-          // Owner view
-          if (contractStatus === 'Pending') {
-            // Show owner confirmation section
-            ownerConfirmationSection.style.display = 'block';
-            setupOwnerConfirmationHandlers(contract);
-          } else if (contractStatus === 'Paid') {
-            // Show payment received confirmation
-            ownerPaymentConfirmationSection.style.display = 'block';
-            document.getElementById('paid-amount').textContent = `${parseFloat(contract.TotalPrice || 0).toFixed(2)} CPT`;
-            setupOwnerPaymentConfirmationHandlers(contract);
-          }
-        } else {
-          // User view - show payment section when status is Active
-          if (contractStatus === 'Active') {
-            console.log('Showing payment section for Active contract');
-            paymentSection.style.display = 'block';
-            
-            const paymentAmount = parseFloat(contract.TotalPrice || 0);
-            const ethRequired = calculateETHAmount(paymentAmount);
-            
-            document.getElementById('payment-amount').textContent = `${paymentAmount.toFixed(2)} CPT (≈ ${ethRequired.toFixed(6)} ETH)`;
-            
-            if (currentAccount) {
-              console.log('Wallet connected, checking ETH balance for CPT purchase');
-              
-              // Check if user has enough ETH to buy the required CPT
-              if (ethBalance >= ethRequired) {
-                makePaymentBtn.disabled = false;
-                makePaymentBtn.textContent = `Pay ${ethRequired.toFixed(6)} ETH`;
-                makePaymentBtn.style.background = '#059669';
-              } else {
-                makePaymentBtn.disabled = true;
-                makePaymentBtn.textContent = `Insufficient ETH (Need ${ethRequired.toFixed(6)} ETH)`;
-                makePaymentBtn.style.background = '#ef4444';
-              }
-            } else {
-              console.log('Wallet not connected');
-              makePaymentBtn.disabled = true;
-              makePaymentBtn.textContent = 'Connect Wallet to Pay';
-              makePaymentBtn.style.background = '#9ca3af';
-            }
+        // Only show for User role and Active contracts
+        if (currentUser.Role === 'User' && contract.Status === 'Active') {
+          paymentSection.style.display = 'block';
+          
+          const paymentAmount = parseFloat(contract.TotalPrice || 0);
+          const ethRequired = paymentAmount * CPT_TOKEN_PRICE;
+          
+          document.getElementById('payment-amount').textContent = `${paymentAmount.toFixed(2)} CPT (${ethRequired.toFixed(6)} ETH)`;
+          
+          if (account && ethBalance >= ethRequired) {
+            makePaymentBtn.disabled = false;
+            makePaymentBtn.textContent = `Pay ${ethRequired.toFixed(6)} ETH`;
+            makePaymentBtn.style.background = '#059669';
+          } else if (account) {
+            makePaymentBtn.disabled = true;
+            makePaymentBtn.textContent = `Insufficient ETH (Need ${ethRequired.toFixed(6)} ETH)`;
+            makePaymentBtn.style.background = '#ef4444';
           } else {
-            console.log('Contract status not Active, hiding payment section. Status:', contractStatus);
+            makePaymentBtn.disabled = true;
+            makePaymentBtn.textContent = 'Connect Wallet to Pay';
+            makePaymentBtn.style.background = '#9ca3af';
           }
         }
       }
       
-      async function makeContractPayment() {
-        const contract = window.contractsManager?.selectedContract;
-        if (!contract || !currentAccount || !cptContract) {
-          alert('Please select a contract and connect your wallet');
-          return;
+      // Setup payment button handler once
+      function setupPaymentButtonHandler() {
+        const makePaymentBtn = document.getElementById('make-payment-btn');
+        if (makePaymentBtn && !makePaymentBtn.dataset.handlerSet) {
+          makePaymentBtn.dataset.handlerSet = 'true';
+          makePaymentBtn.addEventListener('click', makeContractPayment);
+          console.log('Payment button handler set up');
         }
+      }
+      
+      async function makeContractPayment() {
+        console.log('=== PAYMENT BUTTON CLICKED ===');
         
         try {
-          const paymentAmount = parseFloat(contract.TotalPrice);
-          const ethRequired = calculateETHAmount(paymentAmount);
+          // Get contract and account
+          const contract = window.contractsManager?.selectedContract;
+          const account = getCurrentAccount();
           
-          const confirmed = confirm(`Complete payment of ${paymentAmount} CPT (≈ ${ethRequired.toFixed(6)} ETH) for contract ${contract.ContractId}?
-
-This will:
-1. Convert ${ethRequired.toFixed(6)} ETH to ${paymentAmount} CPT
-2. Send CPT to contract owner`);
-          if (!confirmed) return;
+          console.log('Contract:', contract?.ContractId);
+          console.log('Account:', account);
+          console.log('Provider:', !!provider);
           
-          const makePaymentBtn = document.getElementById('make-payment-btn');
-          makePaymentBtn.disabled = true;
-          makePaymentBtn.textContent = 'Processing Payment...';
-          
-          // ✅ STEP 1: Buy CPT tokens with ETH first
-          makePaymentBtn.textContent = 'Buying CPT Tokens...';
-          
-          const tokenPurchase = await buyTokensWithETH(paymentAmount);
-          
-          // Wait for token purchase confirmation
-          const tokenReceipt = await tokenPurchase.tx.wait();
-          
-          console.log('Token purchase confirmed:', tokenReceipt);
-          
-          alert(`✅ CPT Tokens purchased successfully!
-
-🔗 Transaction Hash: ${tokenReceipt.hash}
-💰 ETH Spent: ${tokenPurchase.ethSpent.toFixed(6)} ETH
-🪙 CPT Received: ${tokenPurchase.cptReceived} CPT
-⛽ Gas Used: ${tokenReceipt.gasUsed.toString()}
-
-Now sending CPT to contract owner...`);
-          
-          // ✅ STEP 2: Send ETH directly to owner (payment)
-          makePaymentBtn.textContent = 'Sending Payment to Owner...';
-          
-          // Get signer for ETH transaction
-          const signer = await provider.getSigner();
-          
-          // Get owner wallet address from contract data
-          const contractData = window.contractsManager?.selectedContract;
-          if (!contractData || !contractData.OwnerAddress) {
-            throw new Error('Cannot find owner wallet address');
+          if (!contract) {
+            alert('Please select a contract first');
+            return;
           }
           
-          console.log('Sending ETH payment to owner:', contractData.OwnerAddress);
+          if (!account) {
+            alert('Please connect your wallet first');
+            return;
+          }
           
-          // Send ETH directly to owner as payment
-          const paymentTx = await signer.sendTransaction({
-            to: contractData.OwnerAddress,
-            value: ethers.parseEther(tokenPurchase.ethSpent.toString()),
+          if (!provider) {
+            alert('Provider not available');
+            return;
+          }
+          
+          const makePaymentBtn = document.getElementById('make-payment-btn');
+          if (makePaymentBtn.disabled) {
+            console.log('Button already disabled');
+            return;
+          }
+          
+          // Disable button immediately
+          makePaymentBtn.disabled = true;
+          makePaymentBtn.textContent = 'Processing...';
+          
+          const paymentAmount = parseFloat(contract.TotalPrice);
+          const ethRequired = paymentAmount * CPT_TOKEN_PRICE;
+          
+          console.log('Payment amount:', paymentAmount, 'CPT');
+          console.log('ETH required:', ethRequired);
+          
+          const confirmed = confirm(`Pay ${ethRequired.toFixed(6)} ETH for contract ${contract.ContractId}?`);
+          
+          if (!confirmed) {
+            makePaymentBtn.disabled = false;
+            makePaymentBtn.textContent = 'Pay Now';
+            return;
+          }
+          
+          // Send ETH to owner
+          console.log('Sending ETH to owner:', contract.OwnerAddress);
+          const signer = await provider.getSigner();
+          const tx = await signer.sendTransaction({
+            to: contract.OwnerAddress,
+            value: ethers.parseEther(ethRequired.toString()),
             gasLimit: 21000
           });
           
-          console.log('ETH payment transaction:', paymentTx.hash);
+          console.log('Payment sent:', tx.hash);
+          makePaymentBtn.textContent = 'Confirming...';
           
-          const paymentReceipt = await paymentTx.wait();
-          console.log('ETH payment completed successfully');
+          await tx.wait();
+          console.log('Transaction confirmed');
           
-          // ✅ STEP 3: Update backend
-          makePaymentBtn.textContent = 'Updating Contract Status...';
-          
-          const paymentData = {
-            userWalletAddress: currentAccount,
-            paymentTxHash: paymentTx.hash,
-            tokenPurchaseTxHash: tokenReceipt.hash,
-            paymentAmount: paymentAmount,
-            ethSpent: tokenPurchase.ethSpent,
-            updateStatus: 'Paid'
-          };
-          
-          console.log('Sending payment data to backend:', paymentData);
-          console.log('Contract ID:', contract.ContractId);
-          
-          // Validate required fields
-          if (!contract.ContractId) {
-            throw new Error('Contract ID is missing');
-          }
-          if (!currentAccount) {
-            throw new Error('Wallet address is missing');
-          }
-          if (!paymentTx.hash) {
-            throw new Error('Transaction hash is missing');
-          }
-          
+          // Update backend
           const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/payment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(paymentData)
+            body: JSON.stringify({
+              userWalletAddress: account,
+              paymentTxHash: tx.hash,
+              paymentAmount: paymentAmount,
+              ethSpent: ethRequired,
+              updateStatus: 'Paid'
+            })
           });
           
           const result = await response.json();
           
-          console.log('Backend response:', result);
-          console.log('Response status:', response.status);
-          
-          if (!response.ok) {
-            throw new Error(`Backend error (${response.status}): ${result.error || result.message || 'Unknown error'}`);
-          }
-          
           if (result.success) {
-            alert(`🎉 Payment completed successfully!
-
-💰 PAYMENT DETAILS:
-💳 ETH Spent: ${tokenPurchase.ethSpent.toFixed(6)} ETH
-🪙 CPT Tokens Purchased: ${tokenPurchase.cptReceived} CPT
-💸 ETH Sent to Owner: ${tokenPurchase.ethSpent.toFixed(6)} ETH
-
-🔗 TRANSACTIONS:
-📤 Token Purchase: ${tokenReceipt.hash}
-💰 Payment to Owner: ${paymentTx.hash}
-
-📋 CONTRACT UPDATED:
-Contract ID: ${contract.ContractId}
-Status: Paid
-
-The car owner has received ${tokenPurchase.ethSpent.toFixed(6)} ETH payment.
-Waiting for owner confirmation...`);
-            
-            window.contractsManager.loadContracts();
-            await loadBalances();
+            alert(`✅ Payment successful!\nTransaction: ${tx.hash}`);
+            if (window.contractsManager?.loadContracts) {
+              window.contractsManager.loadContracts();
+            }
           } else {
-            throw new Error(result.error || 'Backend update failed');
+            alert('Backend update failed: ' + (result.error || 'Unknown error'));
           }
           
         } catch (error) {
           console.error('Payment error:', error);
-          alert(`❌ Payment failed!
-
-Error: ${error.message}
-
-Please try again or contact support if the issue persists.`);
+          alert('Payment failed: ' + error.message);
         } finally {
-          updatePaymentSection();
+          // Re-enable button
+          const makePaymentBtn = document.getElementById('make-payment-btn');
+          if (makePaymentBtn) {
+            makePaymentBtn.disabled = false;
+            makePaymentBtn.textContent = 'Pay Now';
+          }
+        }
+      }
+      
+      
+      // Update debug panel
+      function updateDebugPanel() {
+        const debugCurrentUser = document.getElementById('debug-current-user');
+        const debugCurrentAccount = document.getElementById('debug-current-account');
+        const debugProvider = document.getElementById('debug-provider');
+        const debugEthereum = document.getElementById('debug-ethereum');
+        
+        if (debugCurrentUser) {
+          const user = window.AuthManager?.getCurrentUser();
+          debugCurrentUser.textContent = `User: ${user ? `${user.FullName} (${user.Role})` : 'NULL'}`;
+        }
+        
+        if (debugCurrentAccount) {
+          debugCurrentAccount.textContent = `Account: ${currentAccount || 'NULL'}`;
+        }
+        
+        if (debugProvider) {
+          debugProvider.textContent = `Provider: ${provider ? 'CONNECTED' : 'NULL'}`;
+        }
+        
+        if (debugEthereum) {
+          debugEthereum.textContent = `Ethereum: ${window.ethereum ? 'AVAILABLE' : 'NOT_FOUND'}`;
+        }
+      }
+
+      // Update owner wallet status
+      async function updateOwnerWalletStatus() {
+        console.log('=== UPDATE OWNER WALLET STATUS ===');
+        console.log('Current account:', currentAccount);
+        
+        const walletStatus = document.getElementById('wallet-status');
+        const walletAddress = document.getElementById('wallet-address');
+        const connectBtn = document.getElementById('connect-wallet-owner-btn');
+        const confirmBtn = document.getElementById('confirm-payment-received-btn');
+        
+        if (!walletStatus || !walletAddress || !connectBtn || !confirmBtn) {
+          console.log('Wallet status elements not found yet');
+          return;
+        }
+        
+        // Try to get current account from MetaMask if not set
+        if (!currentAccount && window.ethereum) {
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+              currentAccount = accounts[0];
+              console.log('Updated currentAccount from MetaMask:', currentAccount);
+            }
+          } catch (error) {
+            console.error('Error getting MetaMask accounts:', error);
+          }
+        }
+        
+        // Update debug panel
+        updateDebugPanel();
+        
+        if (currentAccount) {
+          walletStatus.textContent = '✅ Connected';
+          walletStatus.style.color = '#28a745';
+          walletAddress.textContent = currentAccount;
+          connectBtn.style.display = 'none';
+          confirmBtn.disabled = false;
+          confirmBtn.style.opacity = '1';
+          console.log('Wallet status updated: Connected');
+        } else {
+          walletStatus.textContent = '❌ Not Connected';
+          walletStatus.style.color = '#dc3545';
+          walletAddress.textContent = '-';
+          connectBtn.style.display = 'inline-block';
+          confirmBtn.disabled = true;
+          confirmBtn.style.opacity = '0.5';
+          console.log('Wallet status updated: Not Connected');
         }
       }
       
@@ -1059,10 +1098,94 @@ Please try again or contact support if the issue persists.`);
       // Setup owner payment confirmation handlers
       function setupOwnerPaymentConfirmationHandlers(contract) {
         const confirmBtn = document.getElementById('confirm-payment-received-btn');
+        const connectBtn = document.getElementById('connect-wallet-owner-btn');
+        const debugRefreshBtn = document.getElementById('debug-refresh-btn');
+        
+        // Setup debug refresh button
+        if (debugRefreshBtn && !debugRefreshBtn.dataset.handlerSet) {
+          debugRefreshBtn.dataset.handlerSet = 'true';
+          debugRefreshBtn.addEventListener('click', async () => {
+            console.log('=== REFRESHING DEBUG STATUS ===');
+            
+            // Try to get fresh account info from MetaMask
+            if (window.ethereum) {
+              try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                console.log('Fresh MetaMask accounts:', accounts);
+                
+                if (accounts.length > 0) {
+                  currentAccount = accounts[0];
+                  console.log('Updated currentAccount:', currentAccount);
+                  
+                  if (!provider) {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    console.log('Created new provider');
+                  }
+                }
+              } catch (error) {
+                console.error('Error getting fresh accounts:', error);
+              }
+            }
+            
+            updateDebugPanel();
+            await updateOwnerWalletStatus();
+          });
+        }
+        
+        // Update debug panel initially
+        updateDebugPanel();
         
         if (confirmBtn && !confirmBtn.dataset.handlerSet) {
           confirmBtn.dataset.handlerSet = 'true';
           confirmBtn.addEventListener('click', () => handleOwnerPaymentConfirmation(contract));
+        }
+        
+        if (connectBtn && !connectBtn.dataset.handlerSet) {
+          connectBtn.dataset.handlerSet = 'true';
+          connectBtn.addEventListener('click', async () => {
+            console.log('=== FORCE CONNECT WALLET ===');
+            try {
+              if (!window.ethereum) {
+                throw new Error('MetaMask not found. Please install MetaMask extension.');
+              }
+              
+              console.log('Requesting account access...');
+              const accounts = await window.ethereum.request({ 
+                method: 'eth_requestAccounts' 
+              });
+              
+              console.log('Accounts received:', accounts);
+              
+              if (accounts.length === 0) {
+                throw new Error('No accounts returned from MetaMask');
+              }
+              
+              // Force set account and provider
+              currentAccount = accounts[0];
+              provider = new ethers.BrowserProvider(window.ethereum);
+              
+              console.log('✅ Wallet connected successfully!');
+              console.log('Account:', currentAccount);
+              console.log('Provider:', !!provider);
+              
+              // Update all UI elements
+              updateDebugPanel();
+              await updateOwnerWalletStatus();
+              
+              alert(`🎉 Wallet connected successfully!\n\n📍 Address: ${currentAccount.substring(0, 6)}...${currentAccount.substring(38)}\n\nYou can now confirm payment receipt.`);
+              
+            } catch (error) {
+              console.error('❌ Failed to connect wallet:', error);
+              
+              if (error.code === 4001) {
+                alert('❌ Connection rejected by user.\n\nPlease approve the connection request in MetaMask.');
+              } else if (error.code === -32002) {
+                alert('⏳ Connection request pending.\n\nPlease check your MetaMask extension.');
+              } else {
+                alert('❌ Failed to connect wallet!\n\nError: ' + error.message + '\n\nPlease try again or refresh the page.');
+              }
+            }
+          });
         }
       }
       
@@ -1107,25 +1230,84 @@ Please try again or contact support if the issue persists.`);
         }
       }
       
+      // Ensure wallet is connected for owner
+      async function ensureOwnerWalletConnected() {
+        console.log('=== ENSURING OWNER WALLET CONNECTED ===');
+        
+        if (!window.ethereum) {
+          throw new Error('MetaMask not found. Please install MetaMask extension.');
+        }
+        
+        try {
+          // Get current accounts
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          console.log('Available accounts:', accounts);
+          
+          if (accounts.length === 0) {
+            // No accounts connected, request permission
+            console.log('No accounts connected, requesting permission...');
+            const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            console.log('Requested accounts:', requestedAccounts);
+            
+            if (requestedAccounts.length === 0) {
+              throw new Error('No accounts granted permission');
+            }
+            
+            setCurrentAccount(requestedAccounts[0]);
+          } else {
+            // Use existing connected account
+            currentAccount = accounts[0];
+          }
+          
+          // Ensure provider is set
+          if (!provider) {
+            provider = new ethers.BrowserProvider(window.ethereum);
+          }
+          
+          console.log('✅ Wallet connection ensured:', currentAccount);
+          updateDebugPanel();
+          await updateOwnerWalletStatus();
+          
+          return currentAccount;
+          
+        } catch (error) {
+          console.error('❌ Error ensuring wallet connection:', error);
+          throw error;
+        }
+      }
+
       // Handle owner payment confirmation
       async function handleOwnerPaymentConfirmation(contract) {
         try {
+          console.log('=== OWNER PAYMENT CONFIRMATION DEBUG ===');
           console.log('Starting owner payment confirmation for contract:', contract.ContractId);
-          console.log('Current account:', currentAccount);
+          console.log('Current user:', window.AuthManager?.getCurrentUser());
+          console.log('Current account before ensure:', currentAccount);
           console.log('Provider:', !!provider);
+          console.log('Window ethereum:', !!window.ethereum);
           
-          // Check if wallet is connected
+          // Ensure wallet is properly connected
+          try {
+            await ensureOwnerWalletConnected();
+            console.log('Wallet connection ensured, currentAccount:', currentAccount);
+          } catch (walletError) {
+            console.error('Failed to ensure wallet connection:', walletError);
+            alert('❌ Failed to connect wallet!\n\n' + walletError.message + '\n\nPlease make sure MetaMask is installed and unlocked.');
+            return;
+          }
+          
+          // Final check - ensure we have wallet and contract is valid
           if (!currentAccount) {
-            alert('Please connect your MetaMask wallet first to confirm payment.');
+            alert('❌ Wallet connection failed. Please try connecting manually using the "Connect MetaMask" button.');
             return;
           }
 
-          if (!provider) {
-            alert('Wallet provider not found. Please refresh and try again.');
+          if (contract.Status !== 'Paid') {
+            alert(`❌ Contract status is ${contract.Status}. Only Paid contracts can be confirmed.`);
             return;
           }
 
-          const confirmed = confirm(`Confirm that you have received payment of ${contract.TotalPrice} CPT for contract ${contract.ContractId}?\n\nThis will create a transaction on the blockchain.`);
+          const confirmed = confirm(`💰 CONFIRM PAYMENT RECEIVED\n\n✅ Contract: ${contract.ContractId}\n💵 Amount: ${contract.TotalPrice} CPT\n🔗 Your wallet: ${currentAccount}\n\n⚠️ This will create a blockchain transaction to confirm payment receipt.\n\nProceed with confirmation?`);
           if (!confirmed) return;
           
           const btn = document.getElementById('confirm-payment-received-btn');
@@ -1156,17 +1338,33 @@ Please try again or contact support if the issue persists.`);
             console.log('Confirmation transaction receipt:', receipt);
 
             // Call backend to update contract status
-            console.log('Calling backend to update contract status...');
+            console.log('=== CALLING BACKEND ===');
+            console.log('Final currentAccount:', currentAccount);
+            console.log('Final confirmationTx.hash:', confirmationTx.hash);
+            
+            // Final validation before sending to backend
+            if (!currentAccount) {
+              throw new Error('Wallet address is missing. Please refresh and try again.');
+            }
+            
+            if (!confirmationTx.hash) {
+              throw new Error('Transaction hash is missing. Please try again.');
+            }
+            
+            const requestBody = {
+              ownerId: window.AuthManager.getCurrentUser().UserId,
+              ownerWalletAddress: currentAccount,
+              confirmationTxHash: confirmationTx.hash,
+              gasUsed: receipt.gasUsed.toString(),
+              blockNumber: receipt.blockNumber
+            };
+            
+            console.log('Request body:', requestBody);
+            
             const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/confirm-payment-received`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ownerId: window.AuthManager.getCurrentUser().UserId,
-                ownerWalletAddress: currentAccount,
-                confirmationTxHash: confirmationTx.hash,
-                gasUsed: receipt.gasUsed.toString(),
-                blockNumber: receipt.blockNumber
-              })
+              body: JSON.stringify(requestBody)
             });
 
             const result = await response.json();
@@ -1191,16 +1389,20 @@ Contract is now completed and recorded on blockchain.`);
             
             if (blockchainError.code === 4001) {
               // User rejected transaction
-              alert('Transaction was cancelled by user.');
+              alert('❌ Transaction was cancelled by user.\n\nPayment confirmation requires a blockchain transaction to complete.');
+            } else if (blockchainError.code === -32602) {
+              alert('❌ Invalid transaction parameters.\n\nPlease try again or contact support.');
+            } else if (blockchainError.code === -32603) {
+              alert('❌ Internal blockchain error.\n\nPlease check your wallet and try again.');
             } else {
-              alert('Blockchain transaction failed: ' + blockchainError.message);
+              alert('❌ Blockchain transaction failed!\n\nError: ' + blockchainError.message + '\n\nPlease ensure you have enough ETH for gas fees and try again.');
             }
             throw blockchainError;
           }
           
         } catch (error) {
           console.error('Payment confirmation error:', error);
-          alert('Failed to confirm payment: ' + error.message);
+          alert('❌ Failed to confirm payment!\n\nError: ' + error.message + '\n\nPlease try again or contact support if the issue persists.');
         } finally {
           const btn = document.getElementById('confirm-payment-received-btn');
           if (btn) {
@@ -1219,6 +1421,19 @@ Contract is now completed and recorded on blockchain.`);
             
             if (currentUser) {
               try {
+                // Check if user is Owner
+                if (currentUser.Role === 'Owner') {
+                  // For owners, allow any wallet connection for payment confirmation
+                  currentAccount = accounts[0];
+                  console.log('Owner account connected:', currentAccount);
+                  updateWalletUI();
+                  updatePaymentSection();
+                  updateOwnerWalletStatus();
+                  await loadBalances();
+                  return;
+                }
+                
+                // For Users, check if wallet matches database
                 const response = await fetch(`http://localhost:3000/api/users/${currentUser.UserId}/wallet`);
                 const walletData = await response.json();
                 
@@ -1228,38 +1443,58 @@ Contract is now completed and recorded on blockchain.`);
                   if (newAccount === userWallet) {
                     currentAccount = accounts[0];
                     await setupWalletConnection();
-                    console.log('Account changed to user wallet:', currentAccount);
+                    console.log('User account changed to registered wallet:', currentAccount);
+                    updateOwnerWalletStatus(); // Update owner wallet status
                   } else {
-                    console.log('Account changed to non-user wallet, disconnecting');
+                    console.log('Account changed to non-registered wallet, disconnecting');
                     currentAccount = null;
                     updateWalletUI();
                     updatePaymentSection();
+                    updateOwnerWalletStatus(); // Update owner wallet status
                   }
                 } else {
                   // User chưa có wallet, disconnect
                   currentAccount = null;
                   updateWalletUI();
                   updatePaymentSection();
+                  updateOwnerWalletStatus(); // Update owner wallet status
                 }
               } catch (error) {
                 console.error('Error checking account change:', error);
                 currentAccount = null;
                 updateWalletUI();
                 updatePaymentSection();
+                updateOwnerWalletStatus(); // Update owner wallet status
               }
             }
           } else {
             currentAccount = null;
             updateWalletUI();
             updatePaymentSection();
+            updateOwnerWalletStatus(); // Update owner wallet status
           }
         });
+      }
+      
+      // Debug function to check button status
+      function debugPaymentButton() {
+        const makePaymentBtn = document.getElementById('make-payment-btn');
+        console.log('=== PAYMENT BUTTON DEBUG ===');
+        console.log('Button exists:', !!makePaymentBtn);
+        console.log('Button disabled:', makePaymentBtn?.disabled);
+        console.log('Button text:', makePaymentBtn?.textContent);
+        console.log('Handler set:', makePaymentBtn?.dataset?.handlerSet);
+        console.log('Current account:', getCurrentAccount());
+        console.log('Selected contract:', window.contractsManager?.selectedContract?.ContractId);
+        console.log('ETH balance:', ethBalance);
+        console.log('Provider:', !!provider);
       }
       
       // Make functions globally accessible
       window.makeContractPayment = makeContractPayment;
       window.connectWallet = connectWallet;
       window.updatePaymentSection = updatePaymentSection;
+      window.debugPaymentButton = debugPaymentButton;
     </script>
   </body>
 </html>

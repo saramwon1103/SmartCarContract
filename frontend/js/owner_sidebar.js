@@ -36,6 +36,9 @@
         // Set active state based on current page
         setActivePage();
         
+        // Setup navigation handlers
+        setupNavigation();
+        
         // Setup logout handler
         setupLogout();
       }
@@ -68,7 +71,7 @@
     if (filename === 'owner_home.html' || filename === 'home.html' || filename.includes('home')) return 'home';
     if (filename.includes('my_contracts')) return 'contracts';
     if (filename.includes('profile')) return 'profile';
-    if (filename.includes('admin_car')) return 'cars';
+    if (filename.includes('owner_car')) return 'cars';
     
     return '';
   }
@@ -90,17 +93,17 @@
     sidebar.innerHTML = `
       <h2 class="logo">MORENT</h2>
       <nav class="menu">
-        <a href="owner_home.html" data-page="home">
+        <a href="#" data-page="home" data-url="owner_home.html">
           <img src="../image/home.svg" class="icon" alt="Home icon"> Home
         </a>
-        <a href="my_contracts.html" data-page="contracts">
+        <a href="#" data-page="contracts" data-url="my_contracts.html">
           <img src="../image/car.svg" class="icon" alt="Contracts icon"> My Contracts
         </a>
-        <a href="profile.html" data-page="profile">
+        <a href="#" data-page="profile" data-url="profile.html">
           <img src="../image/person.svg" class="icon" alt="Profile icon"> Profile
         </a>
-        <a href="owner_car.html" data-page="cars">
-          <img src="../image/car.svg" class="icon" alt="Cars icon"> Cars
+        <a href="#" data-page="cars" data-url="owner_car.html">
+          <img src="../image/car.svg" class="icon" alt="Cars icon"> My Cars
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -119,8 +122,56 @@
     
     setActivePage();
     
+    // Setup navigation handlers
+    setupNavigation();
+    
     // Setup logout handler
     setupLogout();
+  }
+
+  // Setup navigation functionality
+  function setupNavigation() {
+    console.log('Setting up owner sidebar navigation');
+    const navLinks = document.querySelectorAll('.sidebar .menu a[data-url]');
+    
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.getAttribute('data-url');
+        const currentPage = window.location.pathname.split('/').pop();
+        
+        console.log('Owner navigation clicked:', {
+          url: url,
+          currentPage: currentPage,
+          pageName: this.getAttribute('data-page')
+        });
+        
+        if (url && url !== currentPage) {
+          // Add loading state
+          this.style.opacity = '0.6';
+          this.style.pointerEvents = 'none';
+          
+          // For my_contracts, ensure clean loading
+          if (url === 'my_contracts.html') {
+            console.log('Navigating to My Contracts...');
+            // Clear any existing contract data
+            if (window.contractsManager) {
+              delete window.contractsManager;
+            }
+            // Clear any cached data
+            sessionStorage.removeItem('contractsData');
+            localStorage.removeItem('selectedContract');
+          }
+          
+          // Small delay for visual feedback
+          setTimeout(() => {
+            window.location.href = url;
+          }, 100);
+        } else {
+          console.log('Already on the target page:', url);
+        }
+      });
+    });
   }
 
   // Setup logout functionality

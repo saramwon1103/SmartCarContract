@@ -2362,6 +2362,28 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
 
     console.log('Owner payment confirmation request:', { contractId, ownerId, ownerWalletAddress, confirmationTxHash });
 
+    // Validate required fields
+    if (!ownerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Owner ID is required'
+      });
+    }
+
+    if (!ownerWalletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Owner wallet address is required. Please connect your MetaMask wallet and try again.'
+      });
+    }
+
+    if (!confirmationTxHash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Confirmation transaction hash is required. Please complete the blockchain transaction.'
+      });
+    }
+
     // Check if contract exists and belongs to this owner
     const contracts = await query(
       `SELECT c.ContractId, c.Status, c.UserId, c.OwnerId, c.CarId, c.TotalPrice,
@@ -2775,6 +2797,14 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
     // Accept either txHash or paymentTxHash for backwards compatibility
     const transactionHash = paymentTxHash || txHash;
 
+    console.log('=== PAYMENT REQUEST RECEIVED ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Contract ID:', contractId);
+    console.log('User Wallet:', userWalletAddress);
+    console.log('Transaction Hash:', transactionHash);
+    console.log('Payment Amount:', paymentAmount);
+    console.log('ETH Spent:', ethSpent);
+
     if (!contractId || !userWalletAddress || !transactionHash) {
       return res.status(400).json({
         success: false,
@@ -2782,26 +2812,58 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
       });
     }
 
-    console.log('Payment request received:', {
-      contractId,
-      userWalletAddress,
-      paymentTxHash: transactionHash,
-      tokenPurchaseTxHash,
-      paymentAmount,
-      ethSpent,
-      updateStatus
-    });
+    // Check for duplicate transaction hash to prevent double processing
+    const existingPayment = await query(
+      `SELECT ContractId, PaymentTXHash FROM Contracts WHERE PaymentTXHash = ? AND PaymentTXHash IS NOT NULL`,
+      [transactionHash]
+    );
 
-    // Get contract details
+    if (existingPayment.length > 0) {
+      console.log(`❌ Duplicate payment attempt detected! Transaction ${transactionHash} already processed for contract ${existingPayment[0].ContractId}`);
+      return res.status(409).json({
+        success: false,
+        error: 'Payment with this transaction hash has already been processed',
+        existingContractId: existingPayment[0].ContractId
+      });
+    }
+
+    // Get contract details and verify it's in Active status for payment (atomic check)
     const contracts = await query(
       `SELECT * FROM Contracts WHERE ContractId = ? AND Status = 'Active'`,
       [contractId]
     );
 
     if (contracts.length === 0) {
-      return res.status(404).json({
+      // Check what status the contract actually has
+      const contractCheck = await query(
+        `SELECT ContractId, Status FROM Contracts WHERE ContractId = ?`,
+        [contractId]
+      );
+      
+      if (contractCheck.length === 0) {
+        console.log(`❌ Contract ${contractId} not found in database`);
+        return res.status(404).json({
+          success: false,
+          error: 'Contract not found in database'
+        });
+      }
+      
+      const actualStatus = contractCheck[0].Status;
+      console.log(`❌ Contract ${contractId} has status '${actualStatus}', not Active`);
+      
+      // If contract is already Paid, it might be a duplicate/race condition
+      if (actualStatus === 'Paid') {
+        return res.status(409).json({
+          success: false,
+          error: 'Contract has already been paid. This might be a duplicate payment attempt.',
+          currentStatus: actualStatus
+        });
+      }
+      
+      return res.status(400).json({
         success: false,
-        error: 'Active contract not found'
+        error: `Contract status is '${actualStatus}'. Status must be Active for payment.`,
+        currentStatus: actualStatus
       });
     }
 
@@ -2821,16 +2883,51 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
     // Determine new status - use 'Paid' instead of 'Completed' to wait for owner confirmation
     const newStatus = updateStatus || 'Paid';
     
-    // Update contract with payment details and new status (using existing columns only)
-    await query(
+    // Atomic update with status check to prevent race condition
+    const updateResult = await query(
       `UPDATE Contracts 
        SET Status = ?,
            PaymentTXHash = ?,
            PaymentCompletedAt = NOW(),
            PaidAmount = ?
-       WHERE ContractId = ?`,
+       WHERE ContractId = ? AND Status = 'Active'`,
       [newStatus, transactionHash, paidAmount, contractId]
     );
+    
+    // Check if update actually happened (affected rows should be 1)
+    if (updateResult.affectedRows === 0) {
+      // Double check current status
+      const currentStatusCheck = await query(
+        `SELECT Status FROM Contracts WHERE ContractId = ?`,
+        [contractId]
+      );
+      
+      if (currentStatusCheck.length > 0) {
+        const currentStatus = currentStatusCheck[0].Status;
+        console.log(`❌ Failed to update contract ${contractId}. Current status: ${currentStatus}`);
+        
+        if (currentStatus === 'Paid') {
+          return res.status(409).json({
+            success: false,
+            error: 'Contract has already been paid (race condition detected)',
+            currentStatus: currentStatus
+          });
+        }
+        
+        return res.status(400).json({
+          success: false,
+          error: `Contract status changed to '${currentStatus}' during payment processing`,
+          currentStatus: currentStatus
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Contract not found during payment processing'
+        });
+      }
+    }
+    
+    console.log(`✅ Contract ${contractId} payment processed successfully: ${transactionHash}`);
 
     // Log additional transaction info for debugging (optional)
     if (tokenPurchaseTxHash) {
@@ -2842,6 +2939,7 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
 
     // Create notification for owner about payment received
     const notificationId = `NOT${String(Date.now()).slice(-7)}`;
+    const ethSpentInfo = ethSpent ? ` (${ethSpent} ETH sent to your wallet)` : '';
     await query(
       `INSERT INTO ContractNotifications (
         NotificationId, ContractId, UserId, Type, Title, Message, IsRead, CreatedAt
@@ -2851,7 +2949,7 @@ app.post("/api/contracts/:contractId/payment", async (req, res) => {
         contractId,
         contract.OwnerId,
         'Payment Received - Confirmation Required',
-        `User has paid ${paidAmount} CPT for contract ${contractId}. Please confirm payment received in your wallet.`
+        `User has paid ${paidAmount} CPT${ethSpentInfo} for contract ${contractId}. Please check your wallet and confirm payment received.`
       ]
     );
 

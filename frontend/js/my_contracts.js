@@ -447,7 +447,7 @@ class MyContractsManager {
                 return;
             }
 
-            // Check if contract is in Active status
+            // Check if contract is in Active status (ready for payment)
             if (contract.Status?.toLowerCase() !== 'active') {
                 alert(`Contract status is ${contract.Status}. Only Active contracts can be paid.`);
                 return;
