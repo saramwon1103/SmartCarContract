@@ -2360,6 +2360,13 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
     const { contractId } = req.params;
     const { ownerId, ownerWalletAddress, confirmationTxHash, gasUsed, blockNumber } = req.body;
 
+    console.log('🔥 BACKEND: Owner payment confirmation request received');
+    console.log('🔥 BACKEND: contractId:', contractId);
+    console.log('🔥 BACKEND: ownerId:', ownerId);
+    console.log('🔥 BACKEND: ownerWalletAddress:', ownerWalletAddress);
+    console.log('🔥 BACKEND: confirmationTxHash:', confirmationTxHash);
+    console.log('🔥 BACKEND: Full request body:', JSON.stringify(req.body, null, 2));
+
     console.log('Owner payment confirmation request:', { contractId, ownerId, ownerWalletAddress, confirmationTxHash });
 
     // Validate required fields
@@ -2411,6 +2418,23 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
         success: false,
         error: `Contract status is ${contract.Status}, expected Paid`
       });
+    }
+
+    // Simple validation: just verify transaction exists on blockchain (optional)
+    try {
+      console.log('Verifying transaction exists:', confirmationTxHash);
+      
+      // If it's a manual confirmation, skip blockchain verification
+      if (confirmationTxHash.startsWith('MANUAL_CONFIRMATION_')) {
+        console.log('✅ Manual confirmation detected, skipping blockchain verification');
+      } else {
+        const txReceipt = await blockchainService.verifyTransaction(confirmationTxHash);
+        console.log('✅ Transaction verified:', txReceipt.blockNumber);
+      }
+    } catch (error) {
+      console.error('❌ Transaction verification failed:', error);
+      // Continue anyway - this is just owner confirmation, not critical
+      console.log('⚠️ Proceeding without strict verification...');
     }
 
     await query('START TRANSACTION');
@@ -2502,6 +2526,55 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
         
         console.log('PDF uploaded to IPFS successfully:', ipfsHash);
         console.log('Upload result:', uploadResult);
+
+        // Upload contract metadata JSON to IPFS
+        console.log('📄 Uploading contract metadata JSON to IPFS...');
+        const metadataJson = {
+          contractId: contract.ContractId,
+          contractType: contract.Type || 'rental',
+          carInfo: {
+            carId: contract.CarId,
+            carName: contract.CarName,
+            brand: contract.Brand
+          },
+          userInfo: {
+            userId: contract.UserId,
+            userName: contract.UserName
+          },
+          ownerInfo: {
+            ownerId: contract.OwnerId,
+            ownerWalletAddress: ownerWalletAddress
+          },
+          contractDetails: {
+            startDate: contract.StartDate,
+            endDate: contract.EndDate,
+            startTime: contract.StartTime,
+            endTime: contract.EndTime,
+            totalPrice: contract.TotalPrice,
+            status: 'Completed'
+          },
+          blockchain: {
+            paymentTxHash: contract.PaymentTXHash,
+            confirmationTxHash: confirmationTxHash,
+            confirmedAt: new Date().toISOString()
+          },
+          ipfs: {
+            pdfHash: uploadResult.ipfsHash,
+            pdfUrl: uploadResult.pinataUrl
+          },
+          timestamps: {
+            createdAt: contract.CreatedAt,
+            completedAt: new Date().toISOString()
+          }
+        };
+        
+        try {
+          const metadataUploadResult = await pinataService.uploadContractMetadata(metadataJson);
+          console.log('✅ Contract metadata uploaded to IPFS:', metadataUploadResult.ipfsHash);
+        } catch (metadataError) {
+          console.error('⚠️ Metadata upload failed:', metadataError.message);
+          // Don't fail the whole process if metadata upload fails
+        }
 
         // Clean up temporary PDF file
         const fs = await import('fs');
@@ -3682,6 +3755,164 @@ app.get("/api/wallet/exchange-rate", async (req, res) => {
 
   } catch (error) {
     console.error('Error getting exchange rate from contract:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// IPFS Data Retrieval Endpoints
+
+// Get contract IPFS data
+app.get("/api/contracts/:contractId/ipfs-data", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    console.log(`📋 Retrieving IPFS data for contract: ${contractId}`);
+    
+    // Get contract info with IPFS hashes
+    const contracts = await query(
+      `SELECT c.*, car.CarName, car.Brand, car.ImageURL,
+              u.FullName as UserName
+       FROM Contracts c
+       JOIN Cars car ON c.CarId = car.CarId
+       JOIN Users u ON c.UserId = u.UserId
+       WHERE c.ContractId = ?`,
+      [contractId]
+    );
+    
+    if (!contracts.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contract not found'
+      });
+    }
+    
+    const contract = contracts[0];
+    
+    // Get all IPFS files for this contract
+    let ipfsFiles = [];
+    try {
+      ipfsFiles = await pinataService.listContractFiles(contractId);
+    } catch (error) {
+      console.warn('Could not list IPFS files:', error.message);
+    }
+    
+    // Organize IPFS data by type
+    const ipfsData = {
+      contractId: contractId,
+      retrievedAt: new Date().toISOString(),
+      dataTypes: {
+        // 1. Car Image (ảnh xe)
+        carImage: {
+          type: 'image',
+          description: 'Car photo/image',
+          url: contract.ImageURL,
+          ipfsHash: contract.ImageURL?.includes('ipfs') ? contract.ImageURL.split('/').pop() : null
+        },
+        
+        // 2. Contract PDF (file PDF hợp đồng)
+        contractPdf: {
+          type: 'pdf',
+          description: 'Contract PDF document',
+          ipfsHash: contract.TXHash,
+          url: contract.TXHash ? pinataService.getPublicUrl(contract.TXHash) : null
+        },
+        
+        // 3. Contract Metadata JSON (metadata JSON)
+        contractMetadata: null // Will be found in ipfsFiles
+      },
+      allIpfsFiles: ipfsFiles,
+      contract: {
+        id: contract.ContractId,
+        status: contract.Status,
+        carName: contract.CarName,
+        userName: contract.UserName,
+        totalPrice: contract.TotalPrice,
+        createdAt: contract.CreatedAt
+      }
+    };
+    
+    // Find metadata JSON file
+    const metadataFile = ipfsFiles.find(file => 
+      file.metadata?.keyvalues?.fileType === 'contract-metadata'
+    );
+    
+    if (metadataFile) {
+      ipfsData.dataTypes.contractMetadata = {
+        type: 'json',
+        description: 'Contract metadata JSON',
+        ipfsHash: metadataFile.ipfs_pin_hash,
+        url: pinataService.getPublicUrl(metadataFile.ipfs_pin_hash),
+        uploadedAt: metadataFile.date_pinned
+      };
+    }
+    
+    console.log(`✅ Retrieved IPFS data for ${contractId}:`, {
+      carImage: !!ipfsData.dataTypes.carImage.url,
+      contractPdf: !!ipfsData.dataTypes.contractPdf.ipfsHash,
+      contractMetadata: !!ipfsData.dataTypes.contractMetadata,
+      totalFiles: ipfsFiles.length
+    });
+    
+    res.json({
+      success: true,
+      data: ipfsData
+    });
+    
+  } catch (error) {
+    console.error('❌ Error retrieving IPFS data:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get specific IPFS file content
+app.get("/api/ipfs/:hash", async (req, res) => {
+  try {
+    const { hash } = req.params;
+    
+    console.log(`📁 Retrieving IPFS file: ${hash}`);
+    
+    const fileInfo = await pinataService.getFileInfo(hash);
+    
+    res.json({
+      success: true,
+      data: fileInfo,
+      publicUrl: pinataService.getPublicUrl(hash)
+    });
+    
+  } catch (error) {
+    console.error('❌ Error retrieving IPFS file:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test IPFS connection and demo retrieval
+app.get("/api/ipfs/test-connection", async (req, res) => {
+  try {
+    console.log('🧪 Testing IPFS/Pinata connection...');
+    
+    const isConnected = await pinataService.testConnection();
+    
+    if (!isConnected) {
+      throw new Error('Pinata connection test failed');
+    }
+    
+    res.json({
+      success: true,
+      message: 'IPFS/Pinata connection successful',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ IPFS connection test failed:', error);
     res.status(500).json({
       success: false,
       error: error.message

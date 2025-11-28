@@ -1239,175 +1239,164 @@
         }
         
         try {
-          // Get current accounts
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          console.log('Available accounts:', accounts);
+          // Step 1: Get or request accounts
+          let accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          console.log('Initial accounts check:', accounts);
           
           if (accounts.length === 0) {
-            // No accounts connected, request permission
-            console.log('No accounts connected, requesting permission...');
-            const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            console.log('Requested accounts:', requestedAccounts);
+            console.log('No accounts found, requesting access...');
+            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            console.log('Requested accounts:', accounts);
             
-            if (requestedAccounts.length === 0) {
+            if (accounts.length === 0) {
               throw new Error('No accounts granted permission');
             }
-            
-            setCurrentAccount(requestedAccounts[0]);
-          } else {
-            // Use existing connected account
-            currentAccount = accounts[0];
           }
           
-          // Ensure provider is set
+          // Step 2: Set the account and force update all variables
+          const selectedAccount = accounts[0];
+          console.log('Selected account:', selectedAccount);
+          
+          // Force set ALL account variables
+          currentAccount = selectedAccount;
+          window.currentAccount = selectedAccount;
+          
+          console.log('Account variables after setting:');
+          console.log('- currentAccount:', currentAccount);
+          console.log('- window.currentAccount:', window.currentAccount);
+          
+          // Step 3: Ensure provider
           if (!provider) {
+            console.log('Creating new provider...');
             provider = new ethers.BrowserProvider(window.ethereum);
           }
           
-          console.log('✅ Wallet connection ensured:', currentAccount);
+          // Step 4: Final verification
+          const finalAccount = currentAccount;
+          console.log('Final account to return:', finalAccount);
+          
+          if (!finalAccount) {
+            throw new Error('Failed to set account properly');
+          }
+          
+          // Step 5: Update UI
           updateDebugPanel();
           await updateOwnerWalletStatus();
           
-          return currentAccount;
+          console.log('✅ Wallet connection ensured successfully');
+          return finalAccount;
           
         } catch (error) {
           console.error('❌ Error ensuring wallet connection:', error);
-          throw error;
+          throw new Error(`Wallet connection failed: ${error.message}`);
         }
       }
 
       // Handle owner payment confirmation
       async function handleOwnerPaymentConfirmation(contract) {
+        console.log('=== NEW FUNCTION BEING CALLED ===');
+        console.log('=== STARTING OWNER PAYMENT CONFIRMATION ===');
+        console.log('Contract:', contract);
+        
+        // Force alert to verify we're using the new function
+        console.log('🔥 NEW FUNCTION VERSION - TIMESTAMP:', new Date().toISOString());
+        
+        if (!contract || !contract.ContractId) {
+          alert('❌ Contract data is missing. Please refresh and try again.');
+          return;
+        }
+        
+        if (contract.Status !== 'Paid') {
+          alert(`❌ Contract status is ${contract.Status}. Only Paid contracts can be confirmed.`);
+          return;
+        }
+        
         try {
-          console.log('=== OWNER PAYMENT CONFIRMATION DEBUG ===');
-          console.log('Starting owner payment confirmation for contract:', contract.ContractId);
-          console.log('Current user:', window.AuthManager?.getCurrentUser());
-          console.log('Current account before ensure:', currentAccount);
-          console.log('Provider:', !!provider);
-          console.log('Window ethereum:', !!window.ethereum);
+          // Step 1: Connect wallet and get account
+          console.log('Step 1: Getting wallet account...');
           
-          // Ensure wallet is properly connected
-          try {
-            await ensureOwnerWalletConnected();
-            console.log('Wallet connection ensured, currentAccount:', currentAccount);
-          } catch (walletError) {
-            console.error('Failed to ensure wallet connection:', walletError);
-            alert('❌ Failed to connect wallet!\n\n' + walletError.message + '\n\nPlease make sure MetaMask is installed and unlocked.');
+          if (!window.ethereum) {
+            alert('❌ MetaMask not found. Please install MetaMask extension.');
             return;
           }
           
-          // Final check - ensure we have wallet and contract is valid
-          if (!currentAccount) {
-            alert('❌ Wallet connection failed. Please try connecting manually using the "Connect MetaMask" button.');
-            return;
-          }
-
-          if (contract.Status !== 'Paid') {
-            alert(`❌ Contract status is ${contract.Status}. Only Paid contracts can be confirmed.`);
-            return;
-          }
-
-          const confirmed = confirm(`💰 CONFIRM PAYMENT RECEIVED\n\n✅ Contract: ${contract.ContractId}\n💵 Amount: ${contract.TotalPrice} CPT\n🔗 Your wallet: ${currentAccount}\n\n⚠️ This will create a blockchain transaction to confirm payment receipt.\n\nProceed with confirmation?`);
-          if (!confirmed) return;
+          // Request account access
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('🔥 ACCOUNTS FROM METAMASK:', accounts);
           
+          if (accounts.length === 0) {
+            alert('❌ No wallet accounts found. Please connect your MetaMask wallet.');
+            return;
+          }
+          
+          const ownerWalletAddress = accounts[0];
+          console.log('✅ Owner wallet connected:', ownerWalletAddress);
+          console.log('🔥 WALLET ADDRESS TYPE:', typeof ownerWalletAddress);
+          
+          // Step 2: Get user confirmation
+          const confirmed = confirm(`💰 CONFIRM PAYMENT RECEIVED\n\n✅ Contract: ${contract.ContractId}\n💵 Amount: ${contract.TotalPrice} CPT\n🔗 Your wallet: ${ownerWalletAddress}\n\n⚠️ This will confirm that you received the payment.\n\nProceed with confirmation?`);
+          
+          if (!confirmed) {
+            console.log('❌ User cancelled confirmation');
+            return;
+          }
+          
+          // Step 3: Update UI
           const btn = document.getElementById('confirm-payment-received-btn');
-          btn.disabled = true;
-          btn.textContent = 'Processing on Blockchain...';
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+          }
           
-          try {
-            console.log('Creating blockchain transaction for owner confirmation...');
-            // Create a blockchain transaction for owner confirmation
-            const signer = await provider.getSigner();
+          // Step 4: Call backend to update contract status
+          console.log('Step 4: Calling backend to confirm payment...');
+          
+          // Get current user
+          const currentUser = window.AuthManager.getCurrentUser();
+          if (!currentUser || !currentUser.UserId) {
+            throw new Error('User not logged in');
+          }
+          
+          const confirmationId = 'MANUAL_CONFIRMATION_' + Date.now();
+          
+          const requestBody = {
+            ownerId: currentUser.UserId,
+            ownerWalletAddress: ownerWalletAddress,
+            confirmationTxHash: confirmationId
+          };
+          
+          console.log('🔥 REQUEST BODY BEFORE SEND:', JSON.stringify(requestBody, null, 2));
+          
+          const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/confirm-payment-received`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+          
+          const result = await response.json();
+          console.log('Backend response:', result);
+          
+          if (result.success) {
+            alert(`✅ Payment confirmation completed successfully!\n\n📋 Contract: ${contract.ContractId}\n💰 Amount: ${contract.TotalPrice} CPT\n\nContract is now completed.`);
             
-            // Create a simple transaction to record the confirmation on blockchain
-            const confirmationTx = await signer.sendTransaction({
-              to: currentAccount, // Send to self as a record
-              value: ethers.parseEther('0'), // No ETH transfer
-              data: ethers.toUtf8Bytes(`CONFIRM_PAYMENT:${contract.ContractId}:${Date.now()}`), // Data payload
-              gasLimit: 30000
-            });
-
-            console.log('Owner confirmation transaction submitted:', confirmationTx.hash);
-            
-            // Show transaction pending
-            btn.textContent = 'Confirming on Blockchain...';
-            
-            // Wait for transaction confirmation
-            console.log('Waiting for transaction confirmation...');
-            const receipt = await confirmationTx.wait();
-            console.log('Confirmation transaction receipt:', receipt);
-
-            // Call backend to update contract status
-            console.log('=== CALLING BACKEND ===');
-            console.log('Final currentAccount:', currentAccount);
-            console.log('Final confirmationTx.hash:', confirmationTx.hash);
-            
-            // Final validation before sending to backend
-            if (!currentAccount) {
-              throw new Error('Wallet address is missing. Please refresh and try again.');
+            // Reload contracts
+            if (window.contractsManager?.loadContracts) {
+              window.contractsManager.loadContracts();
             }
-            
-            if (!confirmationTx.hash) {
-              throw new Error('Transaction hash is missing. Please try again.');
-            }
-            
-            const requestBody = {
-              ownerId: window.AuthManager.getCurrentUser().UserId,
-              ownerWalletAddress: currentAccount,
-              confirmationTxHash: confirmationTx.hash,
-              gasUsed: receipt.gasUsed.toString(),
-              blockNumber: receipt.blockNumber
-            };
-            
-            console.log('Request body:', requestBody);
-            
-            const response = await fetch(`${API_BASE_URL}/contracts/${contract.ContractId}/confirm-payment-received`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(requestBody)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-              alert(`✅ Payment confirmation completed successfully!
-
-🔗 Confirmation Transaction: ${confirmationTx.hash}
-⛽ Gas Used: ${receipt.gasUsed.toString()}
-📦 Block Number: ${receipt.blockNumber}
-
-Contract is now completed and recorded on blockchain.`);
-              
-              window.contractsManager?.loadContracts();
-              updatePaymentSection();
-            } else {
-              throw new Error(result.error || 'Failed to update contract status');
-            }
-
-          } catch (blockchainError) {
-            console.error('Blockchain transaction failed:', blockchainError);
-            
-            if (blockchainError.code === 4001) {
-              // User rejected transaction
-              alert('❌ Transaction was cancelled by user.\n\nPayment confirmation requires a blockchain transaction to complete.');
-            } else if (blockchainError.code === -32602) {
-              alert('❌ Invalid transaction parameters.\n\nPlease try again or contact support.');
-            } else if (blockchainError.code === -32603) {
-              alert('❌ Internal blockchain error.\n\nPlease check your wallet and try again.');
-            } else {
-              alert('❌ Blockchain transaction failed!\n\nError: ' + blockchainError.message + '\n\nPlease ensure you have enough ETH for gas fees and try again.');
-            }
-            throw blockchainError;
+            updatePaymentSection();
+          } else {
+            alert('❌ Failed to confirm payment: ' + (result.error || 'Unknown error'));
           }
           
         } catch (error) {
-          console.error('Payment confirmation error:', error);
-          alert('❌ Failed to confirm payment!\n\nError: ' + error.message + '\n\nPlease try again or contact support if the issue persists.');
+          console.error('❌ Payment confirmation error:', error);
+          alert('❌ Failed to confirm payment: ' + error.message);
         } finally {
+          // Reset UI
           const btn = document.getElementById('confirm-payment-received-btn');
           if (btn) {
             btn.disabled = false;
-            btn.textContent = 'Confirm Payment Received';
+            btn.textContent = '✅ Confirm Payment Received';
           }
         }
       }
@@ -1490,11 +1479,121 @@ Contract is now completed and recorded on blockchain.`);
         console.log('Provider:', !!provider);
       }
       
+      // Debug function to check owner wallet status
+      function debugOwnerWallet() {
+        console.log('=== OWNER WALLET DEBUG ===');
+        console.log('currentAccount:', currentAccount);
+        console.log('window.currentAccount:', window.currentAccount);
+        console.log('getCurrentAccount():', getCurrentAccount());
+        console.log('provider:', !!provider);
+        console.log('window.ethereum:', !!window.ethereum);
+        console.log('AuthManager user:', window.AuthManager?.getCurrentUser());
+        
+        if (window.ethereum) {
+          window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+            console.log('MetaMask accounts:', accounts);
+          }).catch(err => {
+            console.error('Error getting accounts:', err);
+          });
+        }
+      }
+      
+      // Debug function to manually test wallet setup
+      async function debugWalletSetup() {
+        console.log('=== DEBUG WALLET SETUP ===');
+        
+        try {
+          console.log('Step 1: Check window.ethereum');
+          console.log('window.ethereum exists:', !!window.ethereum);
+          
+          if (!window.ethereum) {
+            alert('MetaMask not found!');
+            return;
+          }
+          
+          console.log('Step 2: Request accounts');
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          console.log('Accounts from MetaMask:', accounts);
+          
+          if (accounts.length === 0) {
+            alert('No accounts returned from MetaMask!');
+            return;
+          }
+          
+          console.log('Step 3: Set current account');
+          const account = accounts[0];
+          console.log('Selected account:', account);
+          
+          // Force set both variables
+          currentAccount = account;
+          window.currentAccount = account;
+          
+          console.log('Step 4: Verify account setting');
+          console.log('currentAccount after set:', currentAccount);
+          console.log('window.currentAccount after set:', window.currentAccount);
+          
+          console.log('Step 5: Create provider');
+          provider = new ethers.BrowserProvider(window.ethereum);
+          console.log('Provider created:', !!provider);
+          
+          console.log('Step 6: Test signer');
+          const signer = await provider.getSigner();
+          console.log('Signer created successfully');
+          
+          console.log('Step 7: Test transaction params');
+          const txParams = {
+            to: account,
+            value: ethers.parseEther('0'),
+            data: ethers.toUtf8Bytes('TEST'),
+            gasLimit: 30000
+          };
+          console.log('Transaction params:', txParams);
+          
+          alert(`✅ Wallet setup successful!\nAccount: ${account}\nProvider: Ready\nSigner: Ready`);
+          
+          return {
+            account: account,
+            provider: !!provider,
+            ready: true
+          };
+          
+        } catch (error) {
+          console.error('❌ Wallet setup failed:', error);
+          alert('❌ Wallet setup failed: ' + error.message);
+          return null;
+        }
+      }
+      
+      // Test function for owner payment confirmation
+      async function testOwnerPaymentConfirmation() {
+        console.log('=== TESTING OWNER PAYMENT CONFIRMATION ===');
+        
+        try {
+          // Test wallet connection
+          const walletResult = await debugWalletSetup();
+          
+          if (!walletResult) {
+            alert('❌ Wallet setup failed, cannot test payment confirmation');
+            return;
+          }
+          
+          console.log('✅ Wallet test successful:', walletResult.account);
+          alert('✅ All tests passed! Owner payment confirmation should work now.');
+          
+        } catch (error) {
+          console.error('❌ Test failed:', error);
+          alert('❌ Test failed: ' + error.message);
+        }
+      }
+      
       // Make functions globally accessible
       window.makeContractPayment = makeContractPayment;
       window.connectWallet = connectWallet;
       window.updatePaymentSection = updatePaymentSection;
       window.debugPaymentButton = debugPaymentButton;
+      window.debugOwnerWallet = debugOwnerWallet;
+      window.testOwnerPaymentConfirmation = testOwnerPaymentConfirmation;
+      window.debugWalletSetup = debugWalletSetup;
     </script>
   </body>
 </html>

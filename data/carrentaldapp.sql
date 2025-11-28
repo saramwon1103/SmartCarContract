@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 26, 2025 lúc 05:24 PM
+-- Thời gian đã tạo: Th10 28, 2025 lúc 09:02 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -59,10 +59,10 @@ CREATE TABLE `cars` (
 
 INSERT INTO `cars` (`CarId`, `CarName`, `Brand`, `ModelYear`, `PriceRent`, `PriceBuy`, `Status`, `ImageURL`, `Description`, `OwnerId`) VALUES
 ('C001', 'Yaris', 'Toyota', '2017-01-01', 15.00, 350.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreigriagse3mbh3qfp5qtg3iy73opnhe3qa5gnyhuidmdi77aoemqbu', 'Toyota Yaris 2017, xe nhỏ gọn, tiết kiệm nhiên liệu, phù hợp đi trong thành phố.', 'U038'),
-('C002', 'Vios', 'Toyota', '2019-01-01', 18.00, 420.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreig3yxsusw3iym45egbknaknd4rvhubxzqkqh6hsuhiwq2tbnj2bo4', 'Toyota Vios, xe sedan phổ biến, tiết kiệm nhiên liệu, phù hợp gia đình.', 'U002'),
-('C003', 'VF3', 'VinFast', '2023-01-01', 25.00, 650.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicc2pboosl7mgjjqlrbaafzz4w75cfb452z7drl4sxjquypkh47hm', 'VinFast VF3, xe điện hiện đại, nhiều tính năng thông minh, phù hợp đô thị.', 'U003'),
-('C004', 'SW4', 'Toyota', '2020-01-01', 35.00, 950.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreibjlewcvinrdpsaxbycaswu33cqpxftqpvsofklhggkt3b4j4ozim', 'Toyota SW4, SUV mạnh mẽ, rộng rãi, phù hợp gia đình và đi đường dài.', 'U004'),
-('C005', 'Fortuner', 'Toyota', '2022-01-01', 40.00, 1200.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicmmtwbzqnawrkir3nahhywho2t6l2p3y7xjp5djubwytgj4b3tle', 'Toyota Fortuner 2022, SUV cao cấp, động cơ mạnh mẽ, nhiều tính năng tiện nghi.', 'U005'),
+('C002', 'Vios', 'Toyota', '2019-01-01', 18.00, 420.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreig3yxsusw3iym45egbknaknd4rvhubxzqkqh6hsuhiwq2tbnj2bo4', 'Toyota Vios, xe sedan phổ biến, tiết kiệm nhiên liệu, phù hợp gia đình.', 'U038'),
+('C003', 'VF3', 'VinFast', '2023-01-01', 25.00, 650.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicc2pboosl7mgjjqlrbaafzz4w75cfb452z7drl4sxjquypkh47hm', 'VinFast VF3, xe điện hiện đại, nhiều tính năng thông minh, phù hợp đô thị.', 'U041'),
+('C004', 'SW4', 'Toyota', '2020-01-01', 35.00, 950.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreibjlewcvinrdpsaxbycaswu33cqpxftqpvsofklhggkt3b4j4ozim', 'Toyota SW4, SUV mạnh mẽ, rộng rãi, phù hợp gia đình và đi đường dài.', 'U041'),
+('C005', 'Fortuner', 'Toyota', '2022-01-01', 40.00, 1200.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicmmtwbzqnawrkir3nahhywho2t6l2p3y7xjp5djubwytgj4b3tle', 'Toyota Fortuner 2022, SUV cao cấp, động cơ mạnh mẽ, nhiều tính năng tiện nghi.', 'U041'),
 ('C006', 'CX-5', 'Mazda', '2021-01-01', 30.00, 850.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreihvqakjjba26cpd23edjtsrfax7k7g7vojr5m22nc37vrobyoqu3a', 'Mazda CX-5, SUV nhỏ gọn, thiết kế thể thao, nhiều công nghệ an toàn.', 'U006'),
 ('C007', 'NX', 'Lexus', '2022-01-01', 55.00, 1800.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreifitszhseo2xygg7g2pu6shloy4vftexu4ggwf5pcvjmivaeqdnoq', 'Lexus NX, SUV sang trọng, tiện nghi cao cấp, phù hợp khách hàng thượng lưu.', 'U007'),
 ('C008', 'Civic', 'Honda', '2020-01-01', 28.00, 700.00, 'Available', 'https://maroon-able-ape-379.mypinata.cloud/ipfs/bafkreicnzlijqpomwychmdv2rtyny7pkh6he65xcpzn73ob2ln3w2xtppq', 'Honda Civic 2020, sedan thể thao, tiết kiệm nhiên liệu, thiết kế hiện đại.', 'U008'),
@@ -111,8 +111,9 @@ CREATE TABLE `contractnotifications` (
 --
 
 INSERT INTO `contractnotifications` (`NotificationId`, `ContractId`, `UserId`, `Type`, `Title`, `Message`, `IsRead`, `CreatedAt`) VALUES
-('NOT3818096', 'CT017', 'U038', 'pending_confirmation', 'New Contract Requires Confirmation', 'A new rent contract for Yaris (Toyota) requires your confirmation. Total: $15', 0, '2025-11-26 23:16:58'),
-('NOT4248473', 'CT016', 'U038', 'pending_confirmation', 'New Contract Requires Confirmation', 'A new rent contract for Yaris (Toyota) requires your confirmation. Total: $15', 0, '2025-11-26 23:24:08');
+('NOT6808239', 'CT016', 'U041', 'pending_confirmation', 'New Contract Requires Confirmation', 'A new rent contract for VF3 (VinFast) requires your confirmation. Total: $50', 0, '2025-11-28 15:00:08'),
+('NOT6819943', 'CT016', 'U036', '', 'Contract Approved - Payment Required', 'Your undefined contract for VF3 has been approved. Please proceed to payment.', 0, '2025-11-28 15:00:19'),
+('NOT6828694', 'CT016', 'U041', '', 'Payment Received - Confirmation Required', 'User has paid 50 CPT (0.01435 ETH sent to your wallet) for contract CT016. Please check your wallet and confirm payment received.', 0, '2025-11-28 15:00:28');
 
 -- --------------------------------------------------------
 
@@ -148,8 +149,7 @@ CREATE TABLE `contracts` (
 
 INSERT INTO `contracts` (`ContractId`, `CarId`, `UserId`, `OwnerId`, `Type`, `StartDate`, `EndDate`, `StartTime`, `EndTime`, `TotalPrice`, `Note`, `Status`, `TXHash`, `OwnerConfirmTXHash`, `OwnerConfirmAt`, `PaymentTXHash`, `PaymentCompletedAt`, `PaidAmount`, `CreatedAt`) VALUES
 ('CT01', 'C001', 'U021', 'U001', 'Rent', '2025-10-01', '2025-10-05', NULL, NULL, 75.00, NULL, 'Completed', '0xabc001', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
-('CT016', 'C001', 'U036', 'U038', 'rent', '2025-11-26', '2025-11-28', '23:24:00', '21:00:00', 15.00, NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-26 23:24:08'),
-('CT017', 'C001', 'U036', 'U038', 'rent', '2025-11-26', '2025-11-28', '23:16:00', '22:00:00', 15.00, NULL, 'Pending', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-26 23:16:58'),
+('CT016', 'C003', 'U036', 'U041', 'rent', '2025-11-28', '2025-11-30', '14:59:00', '20:00:00', 50.00, NULL, 'Paid', NULL, NULL, NULL, '0xedf5506bbfd5e73d1e4d13c5c6fdc58ce6fc5947156e02429182b351a6895832', '2025-11-28 15:00:28', 50.00, '2025-11-28 15:00:08'),
 ('CT02', 'C002', 'U022', 'U002', 'Rent', '2025-11-01', '2025-11-03', NULL, NULL, 54.00, NULL, 'Pending', '0xabc002', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
 ('CT03', 'C003', 'U023', 'U003', 'Rent', '2025-09-15', '2025-09-18', NULL, NULL, 100.00, NULL, 'Completed', '0xabc003', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
 ('CT04', 'C004', 'U024', 'U004', 'Buy', '2025-08-20', '2025-08-20', NULL, NULL, 950.00, NULL, 'Completed', '0xabc004', NULL, NULL, NULL, NULL, NULL, '2025-11-26 22:20:25'),
@@ -242,15 +242,14 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddress`, `AvatarURL`, `Role`, `CreatedAt`) VALUES
 ('U001', 'Nguyen Van A', 'a@example.com', 'hash1', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U002', 'Nguyen Van B', 'b@example.com', 'hash2', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U003', 'Nguyen Van C', 'c@example.com', 'hash3', '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U004', 'Nguyen Van D', 'd@example.com', 'hash4', '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U003', 'Nguyen Van C', 'c@example.com', 'hash3', '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', NULL, 'Owner', '2025-11-12 22:32:18'),
+('U004', 'Nguyen Van D', 'd@example.com', 'hash4', '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U005', 'Nguyen Van E', 'e@example.com', 'hash5', '0xbda5747bfd65f08deb54cb465eb87d40e51b197e', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U006', 'Nguyen Van F', 'f@example.com', 'hash6', '0xPQR...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U007', 'Nguyen Van G', 'g@example.com', 'hash7', '0xSTU...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U008', 'Nguyen Van H', 'h@example.com', 'hash8', '0xVWX...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U009', 'Nguyen Van I', 'i@example.com', 'hash9', '0xYZA...', NULL, 'Owner', '2025-11-12 22:32:18'),
 ('U010', 'Nguyen Van J', 'j@example.com', 'hash10', '0xBCD...', NULL, 'Owner', '2025-11-12 22:32:18'),
-('U011', 'Lê Nguyễn Diễm Quyên', 'diemquyenlenguyen@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', NULL, NULL, 'Admin', '2025-11-17 22:28:48'),
 ('U021', 'Trần Thị Hoa', 'hoa.tran@gmail.com', 'hash21', '0x123ABC...', NULL, 'User', '2025-11-15 10:30:00'),
 ('U022', 'Lê Văn Nam', 'nam.le@gmail.com', 'hash22', '0x456DEF...', NULL, 'User', '2025-11-15 11:15:00'),
 ('U023', 'Phạm Thị Mai', 'mai.pham@gmail.com', 'hash23', '0x789GHI...', NULL, 'User', '2025-11-15 12:45:00'),
@@ -264,8 +263,10 @@ INSERT INTO `users` (`UserId`, `FullName`, `Email`, `PasswordHash`, `WalletAddre
 ('U035', 'Car Renter', 'user@test.com', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', NULL, 'User', '2025-11-20 12:09:34'),
 ('U036', 'Quyên Lê', 'quyen8a2113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 12:57:21'),
 ('U037', 'Quyên Lê', 'saramwon113@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'User', '2025-11-20 13:21:38'),
-('U038', 'Quyên Lê Nguyễn Diễm', '22521228@gm.uit.edu.vn', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199', NULL, 'Owner', '2025-11-21 21:50:10'),
-('U039', 'Quyên', 'saramwon@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', NULL, NULL, 'Owner', '2025-11-24 21:30:24');
+('U038', 'Quyên Lê Nguyễn Diễm', '22521228@gm.uit.edu.vn', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', '0xbda5747bfd65f08deb54cb465eb87d40e51b197e', NULL, 'Owner', '2025-11-21 21:50:10'),
+('U039', 'Quyên', 'saramwon@gmail.com', '15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225', NULL, NULL, 'Owner', '2025-11-24 21:30:24'),
+('U040', 'Chủ xe', 'chuxe@gmail.com', '8a9bcf1e51e812d0af8465a8dbcc9f741064bf0af3b3d08e6b0246437c19f7fb', NULL, NULL, 'Owner', '2025-11-27 14:19:57'),
+('U041', 'chuxe1', 'chuxe1@gmail.com', '8a9bcf1e51e812d0af8465a8dbcc9f741064bf0af3b3d08e6b0246437c19f7fb', '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', NULL, 'Owner', '2025-11-28 13:28:01');
 
 -- --------------------------------------------------------
 

@@ -669,6 +669,39 @@ class BlockchainService {
       throw error;
     }
   }
+
+  // Verify a transaction exists and is confirmed
+  async verifyTransaction(txHash) {
+    try {
+      if (!this.provider) {
+        await this.connectToBlockchain();
+      }
+
+      console.log('Verifying transaction:', txHash);
+      
+      const txReceipt = await this.provider.getTransactionReceipt(txHash);
+      
+      if (!txReceipt) {
+        throw new Error('Transaction not found or not confirmed');
+      }
+
+      if (txReceipt.status !== 1) {
+        throw new Error('Transaction failed');
+      }
+
+      console.log('✅ Transaction verified successfully:', {
+        blockNumber: txReceipt.blockNumber,
+        gasUsed: txReceipt.gasUsed.toString(),
+        status: txReceipt.status
+      });
+
+      return txReceipt;
+
+    } catch (error) {
+      console.error('❌ Error verifying transaction:', error);
+      throw error;
+    }
+  }
 }
 
 export default BlockchainService;

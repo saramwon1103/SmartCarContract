@@ -562,7 +562,29 @@ class MyContractsManager {
                 return;
             }
 
-            const confirmed = confirm(`Confirm that you have received payment of $${contract.TotalPrice} for contract ${contractId}?`);
+            // Check contract status
+            if (contract.Status !== 'Paid') {
+                alert(`❌ Contract status is ${contract.Status}. Only Paid contracts can be confirmed.`);
+                return;
+            }
+
+            // Connect wallet to get owner address
+            if (!window.ethereum) {
+                alert('❌ MetaMask not found. Please install MetaMask extension.');
+                return;
+            }
+
+            // Request account access
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (accounts.length === 0) {
+                alert('❌ No wallet accounts found. Please connect your MetaMask wallet.');
+                return;
+            }
+
+            const ownerWalletAddress = accounts[0];
+            console.log('✅ Owner wallet connected:', ownerWalletAddress);
+
+            const confirmed = confirm(`💰 CONFIRM PAYMENT RECEIVED\n\n✅ Contract: ${contractId}\n💵 Amount: ${contract.TotalPrice} CPT\n🔗 Your wallet: ${ownerWalletAddress}\n\n⚠️ This will confirm that you received the payment.\n\nProceed with confirmation?`);
             if (!confirmed) return;
 
             const response = await fetch(`http://localhost:3000/api/contracts/${contractId}/confirm-payment-received`, {
@@ -571,14 +593,16 @@ class MyContractsManager {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    ownerId: this.currentUserId
+                    ownerId: this.currentUserId,
+                    ownerWalletAddress: ownerWalletAddress,
+                    confirmationTxHash: 'MANUAL_CONFIRMATION_' + Date.now()
                 })
             });
 
             const result = await response.json();
 
             if (result.success) {
-                alert('✅ Payment confirmation completed! Contract is now completed.');
+                alert(`✅ Payment confirmation completed successfully!\n\n📋 Contract: ${contractId}\n💰 Amount: ${contract.TotalPrice} CPT\n\nContract is now completed.`);
                 this.loadContracts(); // Reload contracts
             } else {
                 throw new Error(result.error || 'Failed to confirm payment received');
