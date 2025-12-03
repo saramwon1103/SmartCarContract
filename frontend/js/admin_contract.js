@@ -36,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   async function initContractManagement() {
     try {
+      // Test server connection first
+      await testServerConnection();
+      
       await loadContracts();
       updateStats();
       renderTable();
@@ -54,16 +57,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Load contracts from backend
+  // Test server connection
+  async function testServerConnection() {
+    try {
+      console.log('Testing server connection...');
+      const response = await fetch(`http://localhost:3000/api/health`);
+      if (response.ok) {
+        console.log('Server connection successful');
+      } else {
+        throw new Error('Server not responding');
+      }
+    } catch (error) {
+      console.error('Server connection failed:', error);
+      showError('Cannot connect to server. Please make sure the backend is running.');
+      throw error;
+    }
+  }
+  
   async function loadContracts() {
     try {
+      // Show loading state
+      showNotification('Loading contracts...', 'info');
+      
+      console.log('Fetching contracts from:', `${API_BASE_URL}/contracts`);
       const response = await fetch(`${API_BASE_URL}/contracts`);
-      if (!response.ok) throw new Error('Failed to fetch contracts');
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch contracts: ${response.status} ${response.statusText}`);
+      }
       
       const data = await response.json();
+      console.log('Received data:', data);
+      
+      if (!data.success) {
+        throw new Error(data.error || 'API returned error');
+      }
+      
       contractsData = data.contracts || [];
+      console.log('Contracts loaded:', contractsData.length);
+      
+      if (contractsData.length === 0) {
+        showNotification('No contracts found in database', 'info');
+      } else {
+        showNotification(`Successfully loaded ${contractsData.length} contracts`, 'success');
+      }
+      
     } catch (error) {
       console.error('Error loading contracts:', error);
+      // Show error to user
+      showError(`Failed to load contracts: ${error.message}`);
       // Use fallback data based on actual database structure
       contractsData = [
         {
@@ -75,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
           StartDate: "2025-11-17",
           EndDate: "2025-11-20",
           Deposit: 22.00,
-          TotalAmount: 88.00,
+          TotalPrice: 88.00,
           Status: "Active",
           TXHash: "0x1234567890abcdef1234567890abcdef12345678",
           // Joined data from Cars table
@@ -97,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
           StartDate: "2025-11-16",
           EndDate: "2025-11-19",
           Deposit: 14.00,
-          TotalAmount: 42.00,
+          TotalPrice: 42.00,
           Status: "Pending",
           TXHash: "0x2345678901bcdef012345678901bcdef01234567",
           CarName: "Kia Morning",
@@ -117,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
           StartDate: "2025-11-15",
           EndDate: "2025-11-25",
           Deposit: 105.00,
-          TotalAmount: 420.00,
+          TotalPrice: 420.00,
           Status: "Active",
           TXHash: "0x3456789012cdef0123456789012cdef01234567",
           CarName: "Honda CR-V",
@@ -137,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
           StartDate: "2025-11-10",
           EndDate: "2025-11-14",
           Deposit: 80.00,
-          TotalAmount: 320.00,
+          TotalPrice: 320.00,
           Status: "Completed",
           TXHash: "0x4567890123def01234567890123def01234567",
           CarName: "Tesla Model 3",
@@ -154,10 +197,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Render contracts table
   function renderTable(data = contractsData) {
+    console.log('Rendering table with data:', data);
     const tbody = document.getElementById('rentedCarsTable');
-    if (!tbody) return;
+    if (!tbody) {
+      console.error('Table body element not found');
+      return;
+    }
     
     if (data.length === 0) {
+      console.log('No data to render');
       tbody.innerHTML = '<tr><td colspan="9" class="table-empty">No contracts found</td></tr>';
       return;
     }
@@ -189,8 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td class="contract-type">${contract.Type}</td>
         <td><span class="status-badge status-${contract.Status.toLowerCase()}">${contract.Status}</span></td>
-        <td class="table-price">${contract.Deposit.toFixed(2)} CPT</td>
-        <td class="table-price">${contract.TotalAmount.toFixed(2)} CPT</td>
+        <td class="table-price">${(contract.Deposit || 0).toFixed(2)} CPT</td>
+        <td class="table-price">${(contract.TotalPrice || 0).toFixed(2)} CPT</td>
         <td>
           <div class="action-buttons">
             <button class="btn-view" data-contract-id="${contract.ContractId}" data-action="view">
@@ -288,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update pricing
     updateDetailField('detailDeposit', `${selectedContract.Deposit.toFixed(2)} CPT`);
-    updateDetailField('detailTotalPrice', `${selectedContract.TotalAmount.toFixed(2)} CPT`);
+    updateDetailField('detailTotalPrice', `${(selectedContract.TotalPrice || 0).toFixed(2)} CPT`);
     
     // Show contract status
     updateContractStatusDisplay(selectedContract.Status);

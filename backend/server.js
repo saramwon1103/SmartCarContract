@@ -21,6 +21,9 @@ const blockchainService = new BlockchainService();
 const pdfGenerator = new ContractPDFGenerator();
 const pinataService = new PinataService();
 
+// ID generation locks to prevent concurrent duplicate IDs
+const idGenerationLocks = new Map();
+
 // SỬA DÒNG NÀY: dùng createConnection + new
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "localhost",
@@ -101,45 +104,61 @@ function hashPassword(rawPassword) {
 }
 
 async function generateSequentialId(table, column, prefix, padLength = 3) {
-  const sql = `SELECT ${column} AS id FROM ${table} ORDER BY ${column} DESC LIMIT 1`;
-  const rows = await query(sql);
+  const lockKey = `${table}_${column}`;
   
-  let nextNum = 1;
-  
-  if (rows.length && rows[0].id) {
-    // Extract number from existing ID (e.g., "CT016" -> 16)
-    const match = rows[0].id.match(/(\d+)$/);
-    if (match) {
-      nextNum = parseInt(match[1], 10) + 1;
-    }
+  // Wait if another request is generating ID for the same table
+  while (idGenerationLocks.has(lockKey)) {
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
   
-  // Generate new ID with padding
-  let newId;
-  let attempts = 0;
-  const maxAttempts = 100;
-  
-  do {
-    newId = `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+  try {
+    // Set lock
+    idGenerationLocks.set(lockKey, true);
     
-    // Check if this ID already exists
-    const existingRows = await query(`SELECT ${column} FROM ${table} WHERE ${column} = ? LIMIT 1`, [newId]);
+    const sql = `SELECT ${column} AS id FROM ${table} ORDER BY ${column} DESC LIMIT 1`;
+    const rows = await query(sql);
     
-    if (existingRows.length === 0) {
-      break; // ID is unique, we can use it
+    let nextNum = 1;
+    
+    if (rows.length && rows[0].id) {
+      // Extract number from existing ID (e.g., "CT016" -> 16)
+      const match = rows[0].id.match(/(\d+)$/);
+      if (match) {
+        nextNum = parseInt(match[1], 10) + 1;
+      }
     }
     
-    nextNum++;
-    attempts++;
+    // Generate new ID with padding
+    let newId;
+    let attempts = 0;
+    const maxAttempts = 100;
     
-  } while (attempts < maxAttempts);
-  
-  if (attempts >= maxAttempts) {
-    throw new Error(`Could not generate unique ID after ${maxAttempts} attempts`);
+    do {
+      newId = `${prefix}${String(nextNum).padStart(padLength, "0")}`;
+      
+      // Check if this ID already exists
+      const existingRows = await query(`SELECT ${column} FROM ${table} WHERE ${column} = ? LIMIT 1`, [newId]);
+      
+      if (existingRows.length === 0) {
+        break; // ID is unique, we can use it
+      }
+      
+      nextNum++;
+      attempts++;
+      
+    } while (attempts < maxAttempts);
+    
+    if (attempts >= maxAttempts) {
+      throw new Error(`Could not generate unique ID after ${maxAttempts} attempts`);
+    }
+    
+    console.log(`Generated unique ID: ${newId} (after ${attempts} attempts)`);
+    return newId;
+    
+  } finally {
+    // Remove lock
+    idGenerationLocks.delete(lockKey);
   }
-  
-  console.log(`Generated unique ID: ${newId} (after ${attempts} attempts)`);
-  return newId;
 }
 
 async function generateContractId() {
@@ -236,24 +255,12 @@ async function attachUserExtras(users) {
 
 // Helper function để generate CarId tự động
 async function generateCarId() {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT CarId FROM Cars ORDER BY CarId DESC LIMIT 1`;
-    db.query(sql, (err, results) => {
-      if (err) return reject(err);
-      
-      if (results.length === 0) {
-        return resolve("C0001");
-      }
-      
-      const lastId = results[0].CarId;
-      const match = lastId.match(/\d+/);
-      if (!match) return resolve("C0001");
-      
-      const nextNum = parseInt(match[0]) + 1;
-      const paddedNum = String(nextNum).padStart(4, "0");
-      resolve("C" + paddedNum);
-    });
-  });
+  try {
+    return await generateSequentialId("Cars", "CarId", "C", 4);
+  } catch (error) {
+    console.error("Error generating CarId:", error);
+    throw error;
+  }
 }
 
 // ========== ADMIN CARS API ==========
@@ -309,27 +316,44 @@ app.post("/api/admin/cars", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
     
-    const carId = await generateCarId();
-    
-    const sql = `INSERT INTO Cars (CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    
-    db.query(sql, [carId, carName, brand, modelYear, priceRent, priceBuy, status, imageURL, description || "", ownerId], 
-      (err, results) => {
-        if (err) {
-          console.error("Error creating car:", err);
-          return res.status(500).json({ error: err.message });
-        }
+    let carId;
+    let insertSuccess = false;
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    while (!insertSuccess && retryCount < maxRetries) {
+      try {
+        carId = await generateCarId();
+        console.log(`Attempting to create car with ID: ${carId} (attempt ${retryCount + 1})`);
         
-        db.query(`SELECT * FROM Cars WHERE CarId = ?`, [carId], (err2, carResults) => {
-          if (err2) {
-            return res.status(500).json({ error: err2.message });
+        const sql = `INSERT INTO Cars (CarId, CarName, Brand, ModelYear, PriceRent, PriceBuy, Status, ImageURL, Description, OwnerId) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        
+        await query(sql, [carId, carName, brand, modelYear, priceRent, priceBuy, status, imageURL, description || "", ownerId]);
+        insertSuccess = true;
+        
+        console.log(`Car ${carId} created successfully`);
+        
+      } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+          retryCount++;
+          console.log(`Duplicate key error for ${carId}, retrying... (${retryCount}/${maxRetries})`);
+          
+          if (retryCount >= maxRetries) {
+            throw new Error(`Failed to create car after ${maxRetries} attempts due to duplicate key`);
           }
-          res.status(201).json({ success: true, car: carResults[0] });
-        });
-      });
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    // Get the created car
+    const carResult = await query(`SELECT * FROM Cars WHERE CarId = ?`, [carId]);
+    res.status(201).json({ success: true, car: carResult[0] });
+    
   } catch (error) {
-    console.error("Error in create car:", error);
+    console.error("Error creating car:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -403,6 +427,49 @@ app.delete("/api/admin/cars/:carId", (req, res) => {
       });
     });
   });
+});
+
+// Debug endpoint to check for duplicate CarIds
+app.get("/api/admin/cars/check-duplicates", async (req, res) => {
+  try {
+    const duplicates = await query(`
+      SELECT CarId, COUNT(*) as count 
+      FROM Cars 
+      GROUP BY CarId 
+      HAVING COUNT(*) > 1
+    `);
+    
+    if (duplicates.length === 0) {
+      res.json({
+        success: true,
+        message: "No duplicate CarIds found",
+        duplicates: []
+      });
+    } else {
+      res.json({
+        success: false,
+        message: `Found ${duplicates.length} duplicate CarId(s)`,
+        duplicates: duplicates
+      });
+    }
+  } catch (error) {
+    console.error("Error checking duplicates:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint to get next available CarId
+app.get("/api/admin/cars/next-id", async (req, res) => {
+  try {
+    const nextId = await generateCarId();
+    res.json({
+      success: true,
+      nextCarId: nextId
+    });
+  } catch (error) {
+    console.error("Error getting next CarId:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get("/api/cars", (req, res) => {
@@ -651,18 +718,65 @@ app.get("/api/admin/dashboard/stats", async (req, res) => {
       WHERE Status = 'Completed'
     `);
     
+    // Get car status breakdown
+    const carStatusResult = await query(`
+      SELECT 
+        Status,
+        COUNT(*) as count
+      FROM Cars 
+      GROUP BY Status
+    `);
+    
+    const carStatusStats = {
+      available: 0,
+      rented: 0,
+      purchased: 0
+    };
+    
+    carStatusResult.forEach(row => {
+      if (row.Status === 'Available') carStatusStats.available = row.count;
+      else if (row.Status === 'Rented') carStatusStats.rented = row.count;
+      else if (row.Status === 'Purchased') carStatusStats.purchased = row.count;
+    });
+    
     const stats = {
       totalCars: totalCarsResult.count,
       totalUsers: totalUsersResult.count,
       totalOwners: totalOwnersResult.count,
       activeContracts: activeContractsResult.count,
       totalRevenue: totalRevenueResult.revenue || 0,
-      monthlyGrowth: 12.5 // This could be calculated based on date comparison
+      monthlyGrowth: 12.5, // This could be calculated based on date comparison
+      carStatus: carStatusStats
     };
     
     res.json({ success: true, stats });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get car status statistics for admin dashboard  
+app.get("/api/admin/dashboard/car-status", async (req, res) => {
+  try {
+    const carStatusQuery = `
+      SELECT 
+        Status,
+        COUNT(*) as count,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Cars), 2) as percentage
+      FROM Cars 
+      GROUP BY Status
+      ORDER BY count DESC
+    `;
+    
+    const carStatusResult = await query(carStatusQuery);
+    
+    res.json({ 
+      success: true, 
+      carStatus: carStatusResult 
+    });
+  } catch (error) {
+    console.error("Error fetching car status stats:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -738,8 +852,8 @@ app.get("/api/admin/dashboard/rental-details", async (req, res) => {
         cars.CarName,
         cars.Brand as carType,
         cars.ImageURL as carImage,
-        c.PickupLocation,
-        c.DropoffLocation,
+        'Pickup Location' as PickupLocation,
+        'Dropoff Location' as DropoffLocation,
         c.StartDate as pickupDate,
         c.EndDate as dropoffDate,
         '09:00' as pickupTime,
@@ -798,9 +912,9 @@ app.get("/api/admin/contracts", async (req, res) => {
         c.Type,
         c.StartDate,
         c.EndDate,
-        c.PickupLocation,
-        c.DropoffLocation,
-        c.Deposit,
+        'Pickup Location' as PickupLocation,
+        'Dropoff Location' as DropoffLocation,
+        0.00 as Deposit,
         c.TotalPrice,
         c.Status,
         c.TXHash,
@@ -887,13 +1001,209 @@ app.get("/api/admin/contracts/:contractId", async (req, res) => {
       success: true,
       contract: {
         ...contract,
-        Deposit: parseFloat(contract.Deposit),
+        Deposit: 0.00, // Default value since column doesn't exist
         TotalPrice: parseFloat(contract.TotalPrice),
         PriceRent: parseFloat(contract.PriceRent)
       }
     });
   } catch (error) {
     console.error("Error fetching contract details:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper function để update car status based on contract status
+async function updateCarStatusBasedOnContract(contractId) {
+  try {
+    console.log(`🔄 Updating car status for contract ${contractId}`);
+    
+    // Get contract details
+    const contractInfo = await query(`
+      SELECT c.ContractId, c.CarId, c.Type, c.Status, c.StartDate, c.EndDate
+      FROM Contracts c
+      WHERE c.ContractId = ?
+    `, [contractId]);
+    
+    if (contractInfo.length === 0) {
+      console.log(`❌ Contract ${contractId} not found`);
+      return;
+    }
+    
+    const contract = contractInfo[0];
+    const { CarId, Type, Status, StartDate, EndDate } = contract;
+    
+    console.log(`📋 Contract details:`, { ContractId: contractId, CarId, Type, Status, StartDate, EndDate });
+    
+    let newCarStatus = 'Available'; // Default status
+    
+    // Normalize type to handle different variations
+    const normalizedType = Type?.toLowerCase();
+    
+    if (Status === 'Completed') {
+      if (normalizedType === 'buy' || normalizedType === 'purchase') {
+        // For purchase, car is sold
+        newCarStatus = 'Purchased';
+        console.log(`💰 Purchase completed - setting car status to Purchased`);
+      } else if (normalizedType === 'rent' || normalizedType === 'rental') {
+        // For rental, check if still within rental period
+        const now = new Date();
+        const endDate = new Date(EndDate);
+        
+        console.log(`📅 Checking rental period: now=${now.toISOString()}, endDate=${endDate.toISOString()}`);
+        
+        if (now <= endDate) {
+          // Still within rental period
+          newCarStatus = 'Rented';
+          console.log(`🏠 Still within rental period - setting car status to Rented`);
+        } else {
+          // Rental period ended
+          newCarStatus = 'Available';
+          console.log(`⏰ Rental period ended - setting car status to Available`);
+        }
+      }
+    } else if (Status === 'Active') {
+      if (normalizedType === 'buy' || normalizedType === 'purchase') {
+        newCarStatus = 'Purchased';
+        console.log(`🔥 Active purchase - setting car status to Purchased`);
+      } else if (normalizedType === 'rent' || normalizedType === 'rental') {
+        newCarStatus = 'Rented';
+        console.log(`🚗 Active rental - setting car status to Rented`);
+      }
+    }
+    // For Pending, Terminated status, keep car as Available
+    
+    console.log(`🎯 Setting car ${CarId} status from previous to ${newCarStatus}`);
+    
+    // Update car status
+    await query(`
+      UPDATE Cars 
+      SET Status = ? 
+      WHERE CarId = ?
+    `, [newCarStatus, CarId]);
+    
+    console.log(`✅ Successfully updated car ${CarId} status to ${newCarStatus} for contract ${contractId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error updating car status for contract ${contractId}:`, error);
+  }
+}
+
+// Bulk update all car statuses based on current contracts
+async function updateAllCarStatusesBasedOnContracts() {
+  try {
+    console.log('Starting bulk update of all car statuses...');
+    
+    // Get all contracts that might affect car status
+    const contracts = await query(`
+      SELECT ContractId, CarId, Type, Status, StartDate, EndDate
+      FROM Contracts 
+      WHERE Status IN ('Active', 'Completed')
+      ORDER BY ContractId
+    `);
+    
+    console.log(`Found ${contracts.length} contracts to process`);
+    
+    for (const contract of contracts) {
+      await updateCarStatusBasedOnContract(contract.ContractId);
+    }
+    
+    // Set all other cars to Available if they don't have active/completed contracts
+    await query(`
+      UPDATE Cars 
+      SET Status = 'Available' 
+      WHERE CarId NOT IN (
+        SELECT DISTINCT c.CarId 
+        FROM Contracts c 
+        WHERE c.Status IN ('Active', 'Completed') 
+        AND (
+          c.Type = 'Buy' 
+          OR (c.Type = 'Rent' AND c.EndDate >= CURDATE())
+        )
+      )
+      AND Status != 'Available'
+    `);
+    
+    console.log('Bulk update completed successfully');
+    
+  } catch (error) {
+    console.error('Error in bulk update:', error);
+    throw error;
+  }
+}
+
+// Admin endpoint to manually trigger car status update
+app.post("/api/admin/cars/update-statuses", async (req, res) => {
+  try {
+    await updateAllCarStatusesBasedOnContracts();
+    
+    // Get updated stats
+    const stats = await query(`
+      SELECT 
+        COUNT(*) as totalCars,
+        SUM(CASE WHEN Status = 'Available' THEN 1 ELSE 0 END) as available,
+        SUM(CASE WHEN Status = 'Rented' THEN 1 ELSE 0 END) as rented,
+        SUM(CASE WHEN Status = 'Purchased' THEN 1 ELSE 0 END) as purchased
+      FROM Cars
+    `);
+    
+    res.json({
+      success: true,
+      message: 'All car statuses updated successfully',
+      stats: stats[0]
+    });
+    
+  } catch (error) {
+    console.error("Error updating car statuses:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug endpoint to manually update a specific contract's car status
+app.post("/api/admin/contracts/:contractId/update-car-status", async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    console.log(`🔧 Debug: Manual car status update for contract ${contractId}`);
+    
+    // Get contract info first
+    const contractInfo = await query(`
+      SELECT c.ContractId, c.CarId, c.Type, c.Status, c.StartDate, c.EndDate,
+             car.Status as CurrentCarStatus
+      FROM Contracts c
+      LEFT JOIN Cars car ON c.CarId = car.CarId
+      WHERE c.ContractId = ?
+    `, [contractId]);
+    
+    if (contractInfo.length === 0) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+    
+    const contractDetails = contractInfo[0];
+    console.log(`📊 Contract details before update:`, contractDetails);
+    
+    // Update car status
+    await updateCarStatusBasedOnContract(contractId);
+    
+    // Get updated car status
+    const updatedCarInfo = await query(`
+      SELECT Status as UpdatedCarStatus FROM Cars WHERE CarId = ?
+    `, [contractDetails.CarId]);
+    
+    res.json({
+      success: true,
+      message: `Car status updated for contract ${contractId}`,
+      beforeUpdate: {
+        contractStatus: contractDetails.Status,
+        contractType: contractDetails.Type,
+        carStatus: contractDetails.CurrentCarStatus
+      },
+      afterUpdate: {
+        carStatus: updatedCarInfo[0]?.UpdatedCarStatus
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error updating car status for contract:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -922,6 +1232,9 @@ app.put("/api/admin/contracts/:contractId/status", async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Contract not found" });
     }
+    
+    // Update car status based on new contract status
+    await updateCarStatusBasedOnContract(contractId);
     
     // Get updated contract
     const updatedContract = await query(`
@@ -967,6 +1280,9 @@ app.put("/api/admin/contracts/:contractId/terminate", async (req, res) => {
     `;
     
     const result = await query(terminateQuery, [contractId]);
+    
+    // Update car status when contract is terminated (car becomes available again)
+    await updateCarStatusBasedOnContract(contractId);
     
     res.json({
       success: true,
@@ -1034,9 +1350,9 @@ app.get("/api/admin/contracts/search", async (req, res) => {
         c.Type,
         c.StartDate,
         c.EndDate,
-        c.PickupLocation,
-        c.DropoffLocation,
-        c.Deposit,
+        'Pickup Location' as PickupLocation,
+        'Dropoff Location' as DropoffLocation,
+        0.00 as Deposit,
         c.TotalPrice,
         c.Status,
         c.TXHash,
@@ -1064,12 +1380,10 @@ app.get("/api/admin/contracts/search", async (req, res) => {
         u_user.FullName LIKE ? OR 
         u_user.Email LIKE ? OR
         u_owner.FullName LIKE ? OR 
-        u_owner.Email LIKE ? OR
-        c.PickupLocation LIKE ? OR
-        c.DropoffLocation LIKE ?
+        u_owner.Email LIKE ?
       )`;
       const searchTerm = `%${q}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
     
     if (status) {
@@ -1100,7 +1414,7 @@ app.get("/api/admin/contracts/search", async (req, res) => {
       success: true,
       contracts: contracts.map(contract => ({
         ...contract,
-        Deposit: parseFloat(contract.Deposit),
+        Deposit: parseFloat(contract.Deposit || 0), // Handle case where column doesn't exist
         TotalPrice: parseFloat(contract.TotalPrice)
       }))
     });
@@ -1570,10 +1884,10 @@ app.post("/api/contracts/onchain/create", async (req, res) => {
     // generate ContractId similar to generateSequentialId()
     const contractId = await generateSequentialId("Contracts", "ContractId", "CT");
 
-    const sql = `INSERT INTO Contracts (ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, Deposit, TotalPrice, Status, TXHash)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO Contracts (ContractId, CarId, UserId, OwnerId, Type, StartDate, EndDate, TotalPrice, Status, TXHash)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const status = "Pending signature";
-    await query(sql, [contractId, carId, renterUserId, ownerUserId, type || "Rent", startDate || null, endDate || null, deposit || 0, totalPrice || 0, status, txHash]);
+    await query(sql, [contractId, carId, renterUserId, ownerUserId, type || "Rent", startDate || null, endDate || null, totalPrice || 0, status, txHash]);
 
     res.json({ success: true, contractId, contractAddress, txHash });
   } catch (err) {
@@ -2451,6 +2765,9 @@ app.post("/api/contracts/:contractId/confirm-payment-received", async (req, res)
         [confirmationTxHash || null, contractId]
       );
 
+      // Update car status based on completed contract
+      await updateCarStatusBasedOnContract(contractId);
+
       // Create notification for user
       const notificationId = `NOT${String(Date.now()).slice(-7)}`;
       const notificationMessage = confirmationTxHash ? 
@@ -2821,12 +3138,8 @@ app.post("/api/contracts/:contractId/activate", async (req, res) => {
       [txHash, contractId]
     );
 
-    // Update car status to rented/sold
-    const carStatus = contract.Type === 'purchase' ? 'Sold' : 'Rented';
-    await query(
-      `UPDATE Cars SET Status = ? WHERE CarId = ?`,
-      [carStatus, contract.CarId]
-    );
+    // Update car status based on contract
+    await updateCarStatusBasedOnContract(contractId);
 
     // Create notification for user about contract activation
     const notificationId = `NOT${String(Date.now()).slice(-7)}`;
@@ -3653,6 +3966,9 @@ app.post("/api/contracts/:contractId/complete-payment", async (req, res) => {
       });
     }
 
+    // Update car status based on completed contract
+    await updateCarStatusBasedOnContract(contractId);
+
     res.json({
       success: true,
       message: 'Contract completed successfully',
@@ -3919,6 +4235,49 @@ app.get("/api/ipfs/test-connection", async (req, res) => {
     });
   }
 });
+
+// Function to check and update expired rental contracts
+async function checkExpiredRentals() {
+  try {
+    console.log('Checking for expired rental contracts...');
+    
+    // Find rental contracts that are completed but past their end date
+    const expiredRentals = await query(`
+      SELECT ContractId, CarId, EndDate 
+      FROM Contracts 
+      WHERE Type = 'Rent' 
+      AND Status = 'Completed' 
+      AND EndDate < CURDATE()
+    `);
+    
+    if (expiredRentals.length > 0) {
+      console.log(`Found ${expiredRentals.length} expired rental contracts`);
+      
+      for (const rental of expiredRentals) {
+        await updateCarStatusBasedOnContract(rental.ContractId);
+      }
+      
+      console.log('Updated car statuses for expired rentals');
+    }
+    
+  } catch (error) {
+    console.error('Error checking expired rentals:', error);
+  }
+}
+
+// Run expired rental check every hour
+setInterval(checkExpiredRentals, 60 * 60 * 1000); // 1 hour
+
+// Run initial update on server start
+setTimeout(async () => {
+  try {
+    console.log('Running initial car status update...');
+    await updateAllCarStatusesBasedOnContracts();
+    console.log('Initial car status update completed');
+  } catch (error) {
+    console.error('Initial car status update failed:', error);
+  }
+}, 5000); // 5 seconds after server start
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

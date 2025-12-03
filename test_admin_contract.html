@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Admin Contract</title>
+</head>
+<body>
+    <h1>Testing Admin Contract API</h1>
+    <div id="status">Testing...</div>
+    <div id="data"></div>
+    
+    <script>
+        async function testAPI() {
+            const statusDiv = document.getElementById('status');
+            const dataDiv = document.getElementById('data');
+            
+            try {
+                // Test health endpoint
+                statusDiv.innerHTML = 'Testing server health...';
+                const healthResponse = await fetch('http://localhost:3000/api/health');
+                if (!healthResponse.ok) {
+                    throw new Error('Health check failed');
+                }
+                
+                statusDiv.innerHTML = 'Server OK. Testing contracts endpoint...';
+                
+                // Test contracts endpoint
+                const contractsResponse = await fetch('http://localhost:3000/api/admin/contracts');
+                if (!contractsResponse.ok) {
+                    throw new Error(`Contracts API failed: ${contractsResponse.status}`);
+                }
+                
+                const data = await contractsResponse.json();
+                statusDiv.innerHTML = 'Success! Data loaded.';
+                dataDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `Error: ${error.message}`;
+                console.error('Test failed:', error);
+            }
+        }
+        
+        // Run test on page load
+        testAPI();
+    </script>
+</body>
+</html>

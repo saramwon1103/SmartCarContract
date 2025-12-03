@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDashboardStats(),
         loadCarRentalChart(),
         loadRecentTransactions(),
-        loadRentalDetails()
+        loadRentalDetails(),
+        loadCarStatusStats()
       ]);
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -71,6 +72,113 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     console.log('Dashboard Stats Updated:', stats);
+  }
+  
+  // Load car status statistics  
+  async function loadCarStatusStats() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/car-status`);
+      if (!response.ok) throw new Error('Failed to fetch car status stats');
+      
+      const data = await response.json();
+      updateCarStatusDisplay(data.carStatus);
+    } catch (error) {
+      console.error('Error loading car status stats:', error);
+      // Use fallback data
+      const fallbackData = [
+        { Status: 'Available', count: 20, percentage: 66.67 },
+        { Status: 'Rented', count: 8, percentage: 26.67 },
+        { Status: 'Purchased', count: 2, percentage: 6.67 }
+      ];
+      updateCarStatusDisplay(fallbackData);
+    }
+  }
+  
+  function updateCarStatusDisplay(carStatusData) {
+    console.log('Car Status Data:', carStatusData);
+    
+    // You can add UI elements to display these stats in the dashboard
+    // For example, create a card or section to show car status breakdown
+    const statusContainer = document.getElementById('carStatusStats');
+    if (statusContainer) {
+      let html = '<div class="car-status-breakdown">';
+      html += '<h4>Car Status Breakdown</h4>';
+      
+      carStatusData.forEach(status => {
+        html += `
+          <div class="status-item">
+            <span class="status-label">${status.Status}:</span>
+            <span class="status-count">${status.count} (${status.percentage}%)</span>
+          </div>
+        `;
+      });
+      
+      html += `
+        <button onclick="updateCarStatuses()" class="btn-update-status">
+          🔄 Update Car Statuses
+        </button>
+      </div>`;
+      
+      statusContainer.innerHTML = html;
+    }
+  }
+  
+  // Function to manually update car statuses
+  window.updateCarStatuses = async function() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cars/update-statuses`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) throw new Error('Failed to update car statuses');
+      
+      const result = await response.json();
+      console.log('Car statuses updated:', result);
+      
+      // Refresh the car status display
+      await loadCarStatusStats();
+      
+      // Show success notification
+      showNotification('Car statuses updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error updating car statuses:', error);
+      showNotification('Failed to update car statuses', 'error');
+    }
+  };
+  
+  function showNotification(message, type = 'info') {
+    // Simple notification system
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    switch(type) {
+      case 'success':
+        notification.style.backgroundColor = '#10b981';
+        break;
+      case 'error':
+        notification.style.backgroundColor = '#ef4444';
+        break;
+      default:
+        notification.style.backgroundColor = '#3b82f6';
+    }
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
   }
   
   // Load car rental chart data
